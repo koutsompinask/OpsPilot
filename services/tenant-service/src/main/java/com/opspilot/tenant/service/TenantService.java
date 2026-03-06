@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TenantService {
 
+    private static final String TENANT_NOT_FOUND_MSG = "Tenant not found";
     private final TenantRepository tenantRepository;
     private final UserProfileRepository userProfileRepository;
     private final AuthClient authClient;
@@ -56,14 +57,14 @@ public class TenantService {
 
     public TenantResponse getTenant(UUID tenantId) {
         Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new NotFoundException("Tenant not found"));
+                .orElseThrow(() -> new NotFoundException(TENANT_NOT_FOUND_MSG));
         return new TenantResponse(tenant.getId(), tenant.getName(), tenant.getSettingsJson());
     }
 
     @Transactional
     public TenantResponse updateTenant(UUID tenantId, UpdateTenantRequest request) {
         Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new NotFoundException("Tenant not found"));
+                .orElseThrow(() -> new NotFoundException(TENANT_NOT_FOUND_MSG));
         tenant.setName(request.name());
         tenant.setSettingsJson(request.settingsJson());
         tenantRepository.save(tenant);
@@ -79,7 +80,7 @@ public class TenantService {
     @Transactional
     public UserResponse createUser(CurrentUser actor, CreateUserRequest request) {
         Tenant tenant = tenantRepository.findById(actor.tenantId())
-                .orElseThrow(() -> new NotFoundException("Tenant not found"));
+                .orElseThrow(() -> new NotFoundException(TENANT_NOT_FOUND_MSG));
 
         Role requestedRole = request.role() == null ? Role.TENANT_MEMBER : request.role();
         UUID userId = UUID.randomUUID();
