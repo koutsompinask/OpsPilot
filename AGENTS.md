@@ -33,6 +33,12 @@ Rules:
 3. No temporary hacks: prefer durable fixes over quick patches.
 4. Autonomous bug fixing: when given a bug, diagnose and fix end-to-end without unnecessary user hand-holding.
 
+## Local Run Script Maintenance
+1. Keep `scripts/start-local.sh` aligned with the current implementation state.
+2. When services move from stubs to real implementations, update this script to start the real processes and stop conflicting stubs.
+3. If startup commands, ports, env vars, or readiness checks change, update `scripts/start-local.sh` in the same task.
+4. After changing startup behavior, verify the script with at least a syntax check (`bash -n scripts/start-local.sh`) and one practical smoke run when feasible.
+
 ## Verification Before Completion
 1. Never mark work complete without proving it works.
 2. Run relevant tests and/or build checks for changed components.

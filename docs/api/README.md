@@ -1,3 +1,3 @@
-# api
+# API
 
-Phase 1 placeholder. Detailed assets for this area are added in later phases.
+- [Phase 2 Flow Ledger](./phase-2-flow-ledger.md): end-to-end auth + tenant/user smoke flow with reproducible commands and observed results.
