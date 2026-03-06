@@ -1,6 +1,26 @@
 spring:
   application:
     name: tenant-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:opspilot}?currentSchema=tenant
+    username: ${POSTGRES_USER:opspilot}
+    password: ${POSTGRES_PASSWORD:opspilot}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: tenant
+    open-in-view: false
+  flyway:
+    enabled: true
+    default-schema: tenant
+    schemas: tenant
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
 
 server:
   port: 8082
@@ -10,3 +30,9 @@ management:
     web:
       exposure:
         include: health,info
+
+tenant:
+  service-token: ${INTERNAL_SERVICE_TOKEN:opspilot-internal-dev-token}
+
+auth-service:
+  base-url: ${AUTH_SERVICE_BASE_URL:http://localhost:8081}
