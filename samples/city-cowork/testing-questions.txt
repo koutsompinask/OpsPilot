@@ -1,0 +1,41 @@
+City Cowork - Chat Testing Questions with Expected Output
+
+1) Question: What are the booking rules for meeting rooms?
+Expected output: Meeting rooms use 30 or 60 minute slots, can be booked up to 14 days ahead, and no-show after 10 minutes auto-releases the room.
+Expectation: should answer correctly
+
+2) Question: How do I cancel or reschedule a desk booking?
+Expected output: No explicit cancellation/reschedule procedure for desk bookings is documented.
+Expectation: should not answer correctly / have low confidence
+
+3) Question: What membership plans are available?
+Expected output: Membership plan tiers are not documented in the sample files.
+Expectation: should not answer correctly / have low confidence
+
+4) Question: What is included in a day pass?
+Expected output: Day-pass inclusions are not documented in the sample files.
+Expectation: should not answer correctly / have low confidence
+
+5) Question: How do members get Wi-Fi credentials?
+Expected output: Connect to HarborGuest, complete captive portal, and provide room number + last name; fallback network is HarborGuest-Backup.
+Expectation: should answer correctly
+
+6) Question: What support channels are available for technical issues?
+Expected output: Users can open a front-desk ticket or email support@citycowork.example; unresolved connectivity issues escalate to IT hotline extension 440.
+Expectation: should answer correctly
+
+7) Question: Are guests allowed in the coworking space?
+Expected output: Members can invite up to 2 guests per day, and guests must sign in at reception.
+Expectation: should answer correctly
+
+8) Question: What happens if a member repeatedly no-shows bookings?
+Expected output: Meeting-room no-show after 10 minutes releases the room; repeated noise violations can trigger access suspension (no explicit repeated no-show penalty documented).
+Expectation: should answer correctly
+
+9) Question: Is printing included, and are there usage limits?
+Expected output: Black-and-white printing is included up to 200 pages monthly.
+Expectation: should answer correctly
+
+10) Question: Do you provide overnight sleeping pods?
+Expected output: Overnight sleeping pod policy is not documented in the sample files.
+Expectation: should not answer correctly / have low confidence

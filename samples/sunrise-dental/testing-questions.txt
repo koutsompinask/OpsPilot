@@ -1,0 +1,41 @@
+Sunrise Dental - Chat Testing Questions with Expected Output
+
+1) Question: What is the cancellation policy for appointments?
+Expected output: Cancellations within 24 hours may incur a late fee; same-day cancellations are reviewed case by case.
+Expectation: should answer correctly
+
+2) Question: How far in advance should patients arrive before an appointment?
+Expected output: No explicit arrival lead-time is documented; only that arrivals over 15 minutes late may require rescheduling.
+Expectation: should not answer correctly / have low confidence
+
+3) Question: Which insurance providers are accepted?
+Expected output: Delta Dental PPO, Aetna Dental, and Cigna Dental.
+Expectation: should answer correctly
+
+4) Question: How does billing work for out-of-network patients?
+Expected output: Out-of-network policy is not explicitly documented; available billing notes say co-pay due at service, claims filed within 2 business days, weekly statement emails.
+Expectation: should not answer correctly / have low confidence
+
+5) Question: What is the refund policy for prepaid treatments?
+Expected output: The sample refund file states flexible/non-refundable rate rules and billing dispute timeline; no explicit prepaid treatment refund wording.
+Expectation: should not answer correctly / have low confidence
+
+6) Question: Are emergency dental visits supported?
+Expected output: Emergency cases are prioritized by triage nurse.
+Expectation: should answer correctly
+
+7) Question: How do I reschedule an appointment?
+Expected output: Detailed rescheduling steps are not provided; policy only states arrivals over 15 minutes late may require rescheduling.
+Expectation: should not answer correctly / have low confidence
+
+8) Question: What payment methods are accepted?
+Expected output: Specific payment methods are not documented; only that co-pay is due at time of service.
+Expectation: should not answer correctly / have low confidence
+
+9) Question: Are missed-appointment fees charged?
+Expected output: Cancellation within 24 hours may incur late fee; same-day cancellations are case-by-case. A specific no-show fee is not explicitly listed.
+Expectation: should answer correctly
+
+10) Question: Can you prescribe controlled medication without examination?
+Expected output: This is not documented in the sample files.
+Expectation: should not answer correctly / have low confidence

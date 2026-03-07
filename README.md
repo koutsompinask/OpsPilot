@@ -1,6 +1,6 @@
-# OpsPilot Monorepo (Phase 3)
+# OpsPilot Monorepo (Phase 4)
 
-Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 3 implementation:
+Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 4 implementation:
 - Gradle multi-project Spring Boot service skeletons
 - React + Vite + TypeScript + Tailwind frontend app with complete minimal Phase 2 flow
 - Local infrastructure with Docker Compose
@@ -9,6 +9,7 @@ Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 3 imp
 - Tenant and user management APIs in `tenant-service`
 - API gateway auth routing and JWT enforcement for protected paths
 - Knowledge document ingestion in `knowledge-base-service` (`POST/GET/DELETE /documents` with async processing status)
+- AI chat orchestration in `ai-orchestrator-service` (`POST /chat/ask` with vector retrieval, confidence, and citations)
 
 ## Structure
 
@@ -59,7 +60,7 @@ Phase 2 UI routes:
 
 ## Notes
 
-- Most services are still skeleton-only; `auth-service`, `tenant-service`, `knowledge-base-service`, and `api-gateway` now include implemented behavior.
+- Most services are still skeleton-only; `auth-service`, `tenant-service`, `knowledge-base-service`, `ai-orchestrator-service`, and `api-gateway` now include implemented behavior.
 - Business endpoints and cross-service workflows are added in later phases.
 - Health endpoint baseline: `/actuator/health`.
 - If UI requests fail with `ERR_CONNECTION_REFUSED`, start the local stack first (`./scripts/start-local.sh .env`).

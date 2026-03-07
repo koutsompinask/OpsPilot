@@ -1,0 +1,41 @@
+Harbor Hotel - Chat Testing Questions with Expected Output
+
+1) Question: What time is check-in and check-out?
+Expected output: Check-in starts at 15:00 and check-out is 11:00 local time.
+Expectation: should answer correctly
+
+2) Question: What breakfast options are available and during what hours?
+Expected output: Breakfast is served daily 07:00-10:30 in Garden Hall, with vegan and gluten-free options on request.
+Expectation: should answer correctly
+
+3) Question: Is early check-in allowed, and are there any conditions?
+Expected output: Early check-in is allowed if rooms are available; arrivals before 12:00 may incur a 20 EUR fee.
+Expectation: should answer correctly
+
+4) Question: What should a guest do if they lose their room key?
+Expected output: Not explicitly documented in Harbor Hotel sample files.
+Expectation: should not answer correctly / have low confidence
+
+5) Question: What are the emergency evacuation steps for guests?
+Expected output: During fire alarm, guests should leave belongings, evacuate to Assembly Point A (main parking lot), and front desk prints occupancy list for responders.
+Expectation: should answer correctly
+
+6) Question: How often are rooms cleaned for multi-night stays?
+Expected output: Daily service window is 09:00-16:00; towels replaced daily (unless opt-out); bed linen replaced every 3 nights.
+Expectation: should answer correctly
+
+7) Question: Are there extra charges for late checkout?
+Expected output: Until 13:00 free if available; until 16:00 charged 50% of nightly rate; after 16:00 charged full extra night.
+Expectation: should answer correctly
+
+8) Question: Where can guests find information about hotel amenities?
+Expected output: Amenities details are in the Amenities Guide (breakfast, gym, pool, spa).
+Expectation: should answer correctly
+
+9) Question: Can I bring pets to the hotel?
+Expected output: Pet policy is not present in Harbor Hotel sample files.
+Expectation: should not answer correctly / have low confidence
+
+10) Question: What is your helicopter landing policy?
+Expected output: Helicopter landing policy is not present in Harbor Hotel sample files.
+Expectation: should not answer correctly / have low confidence

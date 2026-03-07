@@ -1,5 +1,4 @@
 ## Pending
-- [ ] Phase 4: AI chat workflow (RAG retrieval, citations, confidence)
 - [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
 
 ## To-Do
@@ -56,6 +55,10 @@
 - [x] Reorganized `samples/` by hypothetical business bundles and added upload mapping guide (`samples/README.md`)
 - [x] Fixed Documents page scroll-jump on `View details` by preserving current viewport position during detail fetch
 - [x] Refined Documents details loading to avoid layout/scroll jumps (removed forced scroll restore; keep details visible with inline `Refreshing...`)
+- [x] Implemented Phase 4 AI chat workflow in `ai-orchestrator-service` (`POST /chat/ask` with JWT auth, pgvector retrieval, OpenAI+local fallback answering, confidence scoring, and citations)
+- [x] Wired Phase 4 integration points (gateway `/chat/**` route, frontend `/chat` functional page, startup/env updates, docs ledger, package-structure verifier inclusion)
+- [x] Added tenant-specific chat testing question sets in `samples/*/testing-questions.txt` for `harbor-hotel`, `city-cowork`, and `sunrise-dental`
+- [x] Updated tenant testing question files with expected outputs and explicit confidence expectations (`should answer correctly` vs `should not answer correctly / have low confidence`)
 
 ### Review
 - `docker compose --env-file .env.example up -d` and `docker compose --env-file .env.example --profile apps up -d` both start successfully with standard port mappings (`5173`, `8080-8087`, `5432`, `6379`, `5672`, `15672`, `9000`, `9001`).
@@ -85,3 +88,7 @@
 - `find samples -maxdepth 2 -type f | sort` verified grouped business bundles and guide file (`harbor-hotel`, `city-cowork`, `sunrise-dental`, `samples/README.md`) on 2026-03-07.
 - `cd frontend && npm run build` succeeded on 2026-03-07 after Documents page scroll-preservation fix for `View details`.
 - `cd frontend && npm run build` succeeded on 2026-03-07 after no-jump details-refresh UX adjustment on Documents page.
+- `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:ai-orchestrator-service:test :services:api-gateway:test` succeeded on 2026-03-07 after Phase 4 implementation/fixes.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after Chat page/API integration.
+- `bash -n scripts/start-local.sh` and `bash scripts/verify-service-structure.sh` both succeeded on 2026-03-07 after Phase 4 startup + structure updates.
+- Isolated full alt-port Phase 4 smoke script `/tmp/opspilot-phase4-smoke-full-alt.sh` succeeded on 2026-03-07 with `CHAT_CONFIDENCE=0.503`, `CHAT_SOURCES=1`, `CHAT_TICKET_CREATED=False`, and unauthenticated `/chat/ask` returning `401`.
