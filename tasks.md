@@ -38,6 +38,11 @@
 - [x] Added frontend auth/API lifecycle helpers (claim decoding, token validity checks, clear session, auto refresh on `401`)
 - [x] Updated frontend navigation to prioritize Phase 2 pages and mark later-phase pages as upcoming
 - [x] Fixed gateway security preflight handling for protected Phase 2 routes (`OPTIONS /**` permit + security CORS enabled)
+- [x] Implemented structured JSON logging baseline (`logback-spring.xml`) across all backend services
+- [x] Added `X-Request-Id` generation/propagation for gateway/auth/tenant request paths and internal service calls
+- [x] Added operational lifecycle logs in gateway/auth/tenant services plus centralized exception logging
+- [x] Updated `AGENTS.md` and `plan.md` with explicit logging and correlation requirements for future phases
+- [x] Added correlation-ID tests for gateway/auth/tenant and verified backend service tests pass
 
 ### Review
 - `docker compose --env-file .env.example up -d` and `docker compose --env-file .env.example --profile apps up -d` both start successfully with standard port mappings (`5173`, `8080-8087`, `5432`, `6379`, `5672`, `15672`, `9000`, `9001`).
@@ -53,3 +58,5 @@
 - Frontend route guard verification: `cd frontend && npm run build` succeeds after adding `RequireAuth`/`PublicOnly` guards around private/public routes.
 - `cd frontend && npm run build` succeeds after complete Phase 2 frontend UI implementation (`tsc -b` + Vite build on 2026-03-06).
 - `./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:compileJava` succeeds after gateway preflight/CORS security fix.
+- `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:test :services:auth-service:test :services:tenant-service:test` succeeded after adding correlation-ID filters/tests and logging updates.
+- `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:knowledge-base-service:test :services:ai-orchestrator-service:test :services:ticket-service:test :services:notification-service:test :services:analytics-service:test` succeeded after adding shared JSON logging baseline.

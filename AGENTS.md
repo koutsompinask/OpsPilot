@@ -32,6 +32,9 @@ Rules:
 2. Minimal impact: touch only required files and preserve existing behavior unless change is intentional.
 3. No temporary hacks: prefer durable fixes over quick patches.
 4. Autonomous bug fixing: when given a bug, diagnose and fix end-to-end without unnecessary user hand-holding.
+5. Logging is required for new behavior: add structured operational logs for key request lifecycle events, business outcomes, and error paths.
+6. Correlation is required across service boundaries: generate/propagate `X-Request-Id` and include request IDs in logs.
+7. Do not log secrets: never log passwords, tokens, raw JWTs, or full sensitive payload bodies.
 
 ## Local Run Script Maintenance
 1. Keep `scripts/start-local.sh` aligned with the current implementation state.

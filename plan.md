@@ -542,6 +542,15 @@ Metrics:
 
 Logs should include correlation IDs.
 
+Logging baseline for all phases:
+
+* structured JSON logs for backend services
+* request lifecycle logs at API boundaries (method/path/status/duration)
+* business outcome logs for major domain actions (success/failure)
+* centralized exception logging with clear severity (`WARN` for expected 4xx, `ERROR` for unexpected failures)
+* correlation via `X-Request-Id` generated at ingress and propagated across internal service calls
+* no logging of secrets (passwords, tokens, raw JWTs, sensitive payload bodies)
+
 ---
 
 # 13. Development Phases
