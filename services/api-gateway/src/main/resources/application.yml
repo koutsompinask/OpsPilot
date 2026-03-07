@@ -31,6 +31,10 @@ spring:
           uri: ${KNOWLEDGE_BASE_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/documents/**
+        - id: ai-orchestrator-service
+          uri: ${AI_ORCHESTRATOR_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/chat/**
 
 server:
   port: 8080
