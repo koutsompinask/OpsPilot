@@ -1,0 +1,15 @@
+Insurance and Billing
+
+Accepted plans:
+- Delta Dental PPO
+- Aetna Dental
+- Cigna Dental
+
+Billing notes:
+- Co-pay is due at time of service.
+- Claims are submitted within 2 business days.
+- Patients receive statement updates by email weekly.
+
+Dispute handling:
+- Billing disputes must include invoice number and service date.
+- Finance response target is 3 business days.

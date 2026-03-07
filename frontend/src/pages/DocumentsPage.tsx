@@ -116,7 +116,6 @@ export function DocumentsPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load document details.";
       setError(message);
-      setSelectedDetails(null);
       setActiveDetailsId(null);
     } finally {
       setIsLoadingDetails(false);
@@ -236,10 +235,11 @@ export function DocumentsPage() {
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-semibold">Selected Document Details</h3>
-        {isLoadingDetails ? (
-          <p className="mt-3 text-sm text-slate-600">Loading details...</p>
-        ) : !selectedDetails ? (
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold">Selected Document Details</h3>
+          {isLoadingDetails ? <span className="text-xs text-slate-500">Refreshing...</span> : null}
+        </div>
+        {!selectedDetails ? (
           <p className="mt-3 text-sm text-slate-600">Select a document row and click "View details".</p>
         ) : (
           <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">

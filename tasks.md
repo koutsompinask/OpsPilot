@@ -53,6 +53,9 @@
 - [x] Documented service package-structure restriction in `AGENTS.md`, `plan.md`, and `docs/architecture/service-package-convention.md`
 - [x] Added automated structure verification script `scripts/verify-service-structure.sh`
 - [x] Added root `samples/` folder with Phase 3 upload test documents (`.txt` + `.md`)
+- [x] Reorganized `samples/` by hypothetical business bundles and added upload mapping guide (`samples/README.md`)
+- [x] Fixed Documents page scroll-jump on `View details` by preserving current viewport position during detail fetch
+- [x] Refined Documents details loading to avoid layout/scroll jumps (removed forced scroll restore; keep details visible with inline `Refreshing...`)
 
 ### Review
 - `docker compose --env-file .env.example up -d` and `docker compose --env-file .env.example --profile apps up -d` both start successfully with standard port mappings (`5173`, `8080-8087`, `5432`, `6379`, `5672`, `15672`, `9000`, `9001`).
@@ -79,3 +82,6 @@
 - `bash scripts/verify-service-structure.sh` succeeded on 2026-03-07 (`[ok] service package structure verification passed for implemented services.`).
 - `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:test :services:auth-service:test :services:tenant-service:test :services:knowledge-base-service:test` succeeded on 2026-03-07 after package refactor.
 - `ls -la samples`, `find samples -maxdepth 1 -type f \\( -name '*.txt' -o -name '*.md' \\)`, and `wc -l samples/*.txt samples/*.md` verified 6 sample files created on 2026-03-07.
+- `find samples -maxdepth 2 -type f | sort` verified grouped business bundles and guide file (`harbor-hotel`, `city-cowork`, `sunrise-dental`, `samples/README.md`) on 2026-03-07.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after Documents page scroll-preservation fix for `View details`.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after no-jump details-refresh UX adjustment on Documents page.
