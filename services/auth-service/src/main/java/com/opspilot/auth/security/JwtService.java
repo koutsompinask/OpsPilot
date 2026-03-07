@@ -1,6 +1,6 @@
 package com.opspilot.auth.security;
 
-import com.opspilot.auth.entity.AuthUser;
+import com.opspilot.auth.domain.entity.AuthUser;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

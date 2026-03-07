@@ -1,15 +1,15 @@
 package com.opspilot.tenant.service;
 
-import com.opspilot.tenant.client.AuthClient;
+import com.opspilot.tenant.service.integration.AuthClient;
 import com.opspilot.tenant.dto.CreateUserRequest;
 import com.opspilot.tenant.dto.InternalBootstrapTenantRequest;
 import com.opspilot.tenant.dto.InternalCreateAuthUserRequest;
 import com.opspilot.tenant.dto.TenantResponse;
 import com.opspilot.tenant.dto.UpdateTenantRequest;
 import com.opspilot.tenant.dto.UserResponse;
-import com.opspilot.tenant.entity.Role;
-import com.opspilot.tenant.entity.Tenant;
-import com.opspilot.tenant.entity.UserProfile;
+import com.opspilot.tenant.domain.entity.Role;
+import com.opspilot.tenant.domain.entity.Tenant;
+import com.opspilot.tenant.domain.entity.UserProfile;
 import com.opspilot.tenant.exception.ConflictException;
 import com.opspilot.tenant.exception.NotFoundException;
 import com.opspilot.tenant.repository.TenantRepository;

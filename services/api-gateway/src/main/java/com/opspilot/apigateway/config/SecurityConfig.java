@@ -1,6 +1,6 @@
 package com.opspilot.apigateway.config;
 
-import com.opspilot.apigateway.logging.RequestCorrelation;
+import com.opspilot.apigateway.util.logging.RequestCorrelation;
 import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

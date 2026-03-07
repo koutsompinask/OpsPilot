@@ -1,16 +1,16 @@
 package com.opspilot.auth.service;
 
-import com.opspilot.auth.client.TenantBootstrapRequest;
-import com.opspilot.auth.client.TenantClient;
+import com.opspilot.auth.service.integration.TenantBootstrapRequest;
+import com.opspilot.auth.service.integration.TenantClient;
 import com.opspilot.auth.dto.InternalCreateUserRequest;
 import com.opspilot.auth.dto.InternalCreateUserResponse;
 import com.opspilot.auth.dto.LoginRequest;
 import com.opspilot.auth.dto.RefreshTokenRequest;
 import com.opspilot.auth.dto.RegisterRequest;
 import com.opspilot.auth.dto.TokenResponse;
-import com.opspilot.auth.entity.AuthUser;
-import com.opspilot.auth.entity.RefreshSession;
-import com.opspilot.auth.entity.Role;
+import com.opspilot.auth.domain.entity.AuthUser;
+import com.opspilot.auth.domain.entity.RefreshSession;
+import com.opspilot.auth.domain.entity.Role;
 import com.opspilot.auth.exception.ConflictException;
 import com.opspilot.auth.exception.UnauthorizedException;
 import com.opspilot.auth.repository.AuthUserRepository;

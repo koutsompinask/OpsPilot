@@ -1,0 +1,17 @@
+Wi-Fi and Technical Support Guide
+
+Primary network: HarborGuest
+Fallback network: HarborGuest-Backup
+
+Standard login procedure:
+1. Connect to HarborGuest.
+2. Open browser and complete captive portal form.
+3. Enter room number and last name.
+
+If guest cannot connect:
+- Ask guest to forget network and reconnect.
+- Reboot guest device.
+- Verify MAC randomization is disabled if portal fails.
+- Escalate to IT hotline extension 440 if unresolved after 10 minutes.
+
+Support desk hours: 07:00-23:00 daily.

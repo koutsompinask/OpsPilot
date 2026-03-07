@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:knowledge;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: test-secret-key-for-jwt-signing
+
+knowledge:
+  embedding:
+    provider: local
+  storage:
+    auto-create-bucket: false
+  messaging:
+    enabled: false

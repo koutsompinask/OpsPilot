@@ -1,6 +1,6 @@
 package com.opspilot.tenant.config;
 
-import com.opspilot.tenant.logging.UserContextMdcInterceptor;
+import com.opspilot.tenant.util.logging.UserContextMdcInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;

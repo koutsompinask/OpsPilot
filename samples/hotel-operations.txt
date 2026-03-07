@@ -1,0 +1,17 @@
+Front Desk Operations
+
+Check-in time starts at 15:00 local time.
+Check-out time is 11:00 local time.
+
+Early check-in policy:
+- Subject to room availability.
+- Before 12:00 may incur a 20 EUR fee.
+
+Late check-out policy:
+- Until 13:00 is free if available.
+- Until 16:00 is charged at 50% of nightly rate.
+- After 16:00 is charged as a full extra night.
+
+Guest verification:
+- Government-issued photo ID is required for all adults.
+- Payment card used for reservation must be presented at check-in.

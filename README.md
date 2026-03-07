@@ -1,6 +1,6 @@
-# OpsPilot Monorepo (Phase 2)
+# OpsPilot Monorepo (Phase 3)
 
-Current state provides the baseline monorepo scaffold plus Phase 2 auth/tenant implementation:
+Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 3 implementation:
 - Gradle multi-project Spring Boot service skeletons
 - React + Vite + TypeScript + Tailwind frontend app with complete minimal Phase 2 flow
 - Local infrastructure with Docker Compose
@@ -8,6 +8,7 @@ Current state provides the baseline monorepo scaffold plus Phase 2 auth/tenant i
 - JWT authentication with register/login/refresh in `auth-service`
 - Tenant and user management APIs in `tenant-service`
 - API gateway auth routing and JWT enforcement for protected paths
+- Knowledge document ingestion in `knowledge-base-service` (`POST/GET/DELETE /documents` with async processing status)
 
 ## Structure
 
@@ -23,7 +24,7 @@ Current state provides the baseline monorepo scaffold plus Phase 2 auth/tenant i
    - `cp .env.example .env`
 2. Start current local stack (recommended):
    - `./scripts/start-local.sh .env`
-   - This loads env vars, starts required Docker infra/stubs, starts real Phase 2 backend services (`api-gateway`, `auth-service`, `tenant-service`), and starts frontend dev server.
+   - This loads env vars, starts required Docker infra/stubs, starts real Phase 3 backend services (`api-gateway`, `auth-service`, `tenant-service`, `knowledge-base-service`), and starts frontend dev server.
 3. Manual compose options (infra/stubs only):
    - `docker compose --env-file .env.example up -d`
    - `docker compose --env-file .env.example --profile apps up -d`
@@ -58,7 +59,7 @@ Phase 2 UI routes:
 
 ## Notes
 
-- Most services are still skeleton-only; `auth-service`, `tenant-service`, and `api-gateway` now include Phase 2 behavior.
+- Most services are still skeleton-only; `auth-service`, `tenant-service`, `knowledge-base-service`, and `api-gateway` now include implemented behavior.
 - Business endpoints and cross-service workflows are added in later phases.
 - Health endpoint baseline: `/actuator/health`.
 - If UI requests fail with `ERR_CONNECTION_REFUSED`, start the local stack first (`./scripts/start-local.sh .env`).

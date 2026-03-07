@@ -1,5 +1,4 @@
 ## Pending
-- [ ] Phase 3: Knowledge ingestion (upload, extraction, chunking, embeddings, pgvector)
 - [ ] Phase 4: AI chat workflow (RAG retrieval, citations, confidence)
 - [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
 
@@ -43,6 +42,17 @@
 - [x] Added operational lifecycle logs in gateway/auth/tenant services plus centralized exception logging
 - [x] Updated `AGENTS.md` and `plan.md` with explicit logging and correlation requirements for future phases
 - [x] Added correlation-ID tests for gateway/auth/tenant and verified backend service tests pass
+- [x] Implemented Phase 3 knowledge-base service with async text ingestion (`.txt`/`.md`), chunking, dual embeddings (local/openai), pgvector persistence, MinIO object storage, and tenant-scoped document APIs (`POST/GET/GET{id}/DELETE /documents`)
+- [x] Added Phase 3 security/logging/correlation baseline in knowledge service (JWT resource server, role checks, structured lifecycle/error logs with `X-Request-Id`)
+- [x] Added `DocumentProcessed` RabbitMQ event publishing on successful ingestion and verified publish log marker
+- [x] Wired API gateway route for `/documents/**` to knowledge service and updated local env defaults
+- [x] Updated `scripts/start-local.sh` to run real `knowledge-base-service` process (Phase 3) and added readiness checks/env propagation
+- [x] Added Phase 3 API flow ledger (`docs/api/phase-3-flow-ledger.md`) and linked from docs API index
+- [x] Implemented Phase 3 frontend documents UI on `/documents` (admin upload/delete, list/status refresh, details fetch, member read-only view) and promoted Documents nav from upcoming to active
+- [x] Refactored implemented services (`api-gateway`, `auth-service`, `tenant-service`, `knowledge-base-service`) to universal package structure with `domain/entity` and nested subcategories (`service/*`, `util/logging`, `service/integration`)
+- [x] Documented service package-structure restriction in `AGENTS.md`, `plan.md`, and `docs/architecture/service-package-convention.md`
+- [x] Added automated structure verification script `scripts/verify-service-structure.sh`
+- [x] Added root `samples/` folder with Phase 3 upload test documents (`.txt` + `.md`)
 
 ### Review
 - `docker compose --env-file .env.example up -d` and `docker compose --env-file .env.example --profile apps up -d` both start successfully with standard port mappings (`5173`, `8080-8087`, `5432`, `6379`, `5672`, `15672`, `9000`, `9001`).
@@ -60,3 +70,12 @@
 - `./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:compileJava` succeeds after gateway preflight/CORS security fix.
 - `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:test :services:auth-service:test :services:tenant-service:test` succeeded after adding correlation-ID filters/tests and logging updates.
 - `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:knowledge-base-service:test :services:ai-orchestrator-service:test :services:ticket-service:test :services:notification-service:test :services:analytics-service:test` succeeded after adding shared JSON logging baseline.
+- `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:knowledge-base-service:test :services:api-gateway:test` succeeded after Phase 3 implementation and gateway `/documents/**` route wiring.
+- `bash -n scripts/start-local.sh` passes after Phase 3 startup updates.
+- `timeout 180s ./scripts/start-local.sh .env.example` reached ready state for `tenant-service`, `auth-service`, `knowledge-base-service`, `api-gateway`, and frontend before timeout cleanup.
+- End-to-end Phase 3 smoke (2026-03-07): `POST /documents` -> `PROCESSING`, polled `GET /documents/{id}` -> `READY`, `GET /documents` returned count `1`, `DELETE /documents/{id}` returned `204`, unauthorized `GET /documents` returned `401`, unsupported `.csv` upload returned `400`.
+- `knowledge-base-service` log verification confirms `knowledge_document_processed_event_published` is emitted for a successfully processed document.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after Phase 3 documents UI implementation (`tsc -b` + Vite build).
+- `bash scripts/verify-service-structure.sh` succeeded on 2026-03-07 (`[ok] service package structure verification passed for implemented services.`).
+- `GRADLE_USER_HOME=/tmp/opspilot-gradle-home ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:test :services:auth-service:test :services:tenant-service:test :services:knowledge-base-service:test` succeeded on 2026-03-07 after package refactor.
+- `ls -la samples`, `find samples -maxdepth 1 -type f \\( -name '*.txt' -o -name '*.md' \\)`, and `wc -l samples/*.txt samples/*.md` verified 6 sample files created on 2026-03-07.

@@ -109,13 +109,13 @@ echo "[info] Starting required Docker services (infra + current backend stubs)..
 
 # Stop placeholder containers that would conflict with real app processes
 # (same ports as the Spring Boot and frontend dev servers).
-docker compose --env-file "$ENV_FILE" stop api-gateway auth-service tenant-service frontend >/dev/null 2>&1 || true
+docker compose --env-file "$ENV_FILE" stop api-gateway auth-service tenant-service knowledge-base-service frontend >/dev/null 2>&1 || true
 
 # Start infra + still-stubbed backend services.
-# Real Phase 2 services (auth/tenant/gateway) are started below via Gradle.
+# Real Phase 3 services (gateway/auth/tenant/knowledge-base) are started below via Gradle.
 docker compose --env-file "$ENV_FILE" up -d \
   postgres redis rabbitmq minio \
-  knowledge-base-service ai-orchestrator-service ticket-service notification-service analytics-service
+  ai-orchestrator-service ticket-service notification-service analytics-service
 
 # Shared environment for real backend services launched via Gradle bootRun.
 COMMON_ENV=(
@@ -123,16 +123,35 @@ COMMON_ENV=(
   "INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}"
   "AUTH_SERVICE_BASE_URL=${AUTH_SERVICE_BASE_URL:-http://localhost:${AUTH_SERVICE_PORT:-8081}}"
   "TENANT_SERVICE_BASE_URL=${TENANT_SERVICE_BASE_URL:-http://localhost:${TENANT_SERVICE_PORT:-8082}}"
+  "KNOWLEDGE_BASE_SERVICE_URL=${KNOWLEDGE_BASE_SERVICE_URL:-http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}}"
   "POSTGRES_HOST=${POSTGRES_HOST:-localhost}"
   "POSTGRES_PORT=${POSTGRES_PORT:-5432}"
   "POSTGRES_DB=${POSTGRES_DB:-opspilot}"
   "POSTGRES_USER=${POSTGRES_USER:-opspilot}"
   "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-opspilot}"
+  "RABBITMQ_HOST=${RABBITMQ_HOST:-localhost}"
+  "RABBITMQ_PORT=${RABBITMQ_PORT:-5672}"
+  "RABBITMQ_USERNAME=${RABBITMQ_USERNAME:-guest}"
+  "RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}"
+  "S3_ENDPOINT=${S3_ENDPOINT:-http://localhost:${MINIO_PORT:-9000}}"
+  "S3_REGION=${S3_REGION:-us-east-1}"
+  "S3_ACCESS_KEY=${S3_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}"
+  "S3_SECRET_KEY=${S3_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}"
+  "S3_BUCKET=${S3_BUCKET:-knowledge-documents}"
+  "S3_AUTO_CREATE_BUCKET=${S3_AUTO_CREATE_BUCKET:-true}"
+  "KNOWLEDGE_EMBEDDING_PROVIDER=${KNOWLEDGE_EMBEDDING_PROVIDER:-local}"
+  "OPENAI_API_KEY=${OPENAI_API_KEY:-}"
+  "OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}"
+  "OPENAI_EMBEDDING_URL=${OPENAI_EMBEDDING_URL:-https://api.openai.com/v1/embeddings}"
+  "KNOWLEDGE_MESSAGING_ENABLED=${KNOWLEDGE_MESSAGING_ENABLED:-true}"
+  "DOCUMENT_PROCESSED_EXCHANGE=${DOCUMENT_PROCESSED_EXCHANGE:-opspilot.events}"
+  "DOCUMENT_PROCESSED_ROUTING_KEY=${DOCUMENT_PROCESSED_ROUTING_KEY:-document.processed}"
 )
 
 # Start real backend services for current implementation phase.
 start_bg "tenant-service" env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:tenant-service:bootRun
 start_bg "auth-service" env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:auth-service:bootRun
+start_bg "knowledge-base-service" env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:knowledge-base-service:bootRun
 start_bg "api-gateway" env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:bootRun
 
 # Install frontend dependencies automatically when missing (first run convenience).
@@ -147,6 +166,7 @@ start_bg "frontend" bash -lc "cd '$ROOT_DIR/frontend' && npm run dev -- --host 0
 # Wait until services are actually reachable before announcing success.
 wait_http_ok "http://localhost:${TENANT_SERVICE_PORT:-8082}/actuator/health" "tenant-service"
 wait_http_ok "http://localhost:${AUTH_SERVICE_PORT:-8081}/actuator/health" "auth-service"
+wait_http_ok "http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}/actuator/health" "knowledge-base-service"
 wait_http_ok "http://localhost:${API_GATEWAY_PORT:-8080}/actuator/health" "api-gateway"
 
 # Frontend readiness check (Vite index page).
@@ -158,6 +178,7 @@ echo "  frontend:    http://localhost:${FRONTEND_PORT:-5173}"
 echo "  api-gateway: http://localhost:${API_GATEWAY_PORT:-8080}"
 echo "  auth:        http://localhost:${AUTH_SERVICE_PORT:-8081}"
 echo "  tenant:      http://localhost:${TENANT_SERVICE_PORT:-8082}"
+echo "  knowledge:   http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}"
 echo
 echo "[info] Press Ctrl+C to stop local app processes started by this script."
 echo "[info] Docker containers remain running."

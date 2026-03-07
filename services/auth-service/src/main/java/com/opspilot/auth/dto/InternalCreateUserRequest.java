@@ -1,6 +1,6 @@
 package com.opspilot.auth.dto;
 
-import com.opspilot.auth.entity.Role;
+import com.opspilot.auth.domain.entity.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

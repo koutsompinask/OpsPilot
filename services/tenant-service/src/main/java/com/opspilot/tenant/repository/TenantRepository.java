@@ -1,6 +1,6 @@
 package com.opspilot.tenant.repository;
 
-import com.opspilot.tenant.entity.Tenant;
+import com.opspilot.tenant.domain.entity.Tenant;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 

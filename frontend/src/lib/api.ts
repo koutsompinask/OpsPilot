@@ -47,6 +47,19 @@ export type CreateUserRequest = {
   role: TenantUserRole;
 };
 
+export type DocumentStatus = "PROCESSING" | "READY" | "FAILED";
+
+export type DocumentResponse = {
+  id: string;
+  filename: string;
+  contentType: string;
+  status: DocumentStatus;
+  chunkCount: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 async function parseErrorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as ApiErrorBody;
@@ -80,15 +93,15 @@ async function refreshAccessToken(): Promise<boolean> {
   return true;
 }
 
-async function requestJson<T>(
+async function performRequest(
   path: string,
   init: RequestInit = {},
   options: RequestOptions = {},
-): Promise<T> {
+): Promise<Response> {
   const { auth = false, retryOnUnauthorized = true } = options;
   const headers = new Headers(init.headers ?? {});
 
-  if (init.body && !headers.has("Content-Type")) {
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -107,15 +120,37 @@ async function requestJson<T>(
   if (response.status === 401 && auth && retryOnUnauthorized) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
-      return requestJson<T>(path, init, { ...options, retryOnUnauthorized: false });
+      return performRequest(path, init, { ...options, retryOnUnauthorized: false });
     }
   }
+
+  return response;
+}
+
+async function requestJson<T>(
+  path: string,
+  init: RequestInit = {},
+  options: RequestOptions = {},
+): Promise<T> {
+  const response = await performRequest(path, init, options);
 
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response));
   }
 
   return (await response.json()) as T;
+}
+
+async function requestVoid(
+  path: string,
+  init: RequestInit = {},
+  options: RequestOptions = {},
+): Promise<void> {
+  const response = await performRequest(path, init, options);
+
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
 }
 
 export async function register(payload: RegisterRequest): Promise<TokenResponse> {
@@ -152,4 +187,26 @@ export async function createUser(payload: CreateUserRequest): Promise<UserRespon
     method: "POST",
     body: JSON.stringify(payload),
   }, { auth: true });
+}
+
+export async function uploadDocument(file: File): Promise<DocumentResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return requestJson<DocumentResponse>("/documents", {
+    method: "POST",
+    body: formData,
+  }, { auth: true });
+}
+
+export async function listDocuments(): Promise<DocumentResponse[]> {
+  return requestJson<DocumentResponse[]>("/documents", { method: "GET" }, { auth: true });
+}
+
+export async function getDocument(documentId: string): Promise<DocumentResponse> {
+  return requestJson<DocumentResponse>(`/documents/${documentId}`, { method: "GET" }, { auth: true });
+}
+
+export async function deleteDocument(documentId: string): Promise<void> {
+  return requestVoid(`/documents/${documentId}`, { method: "DELETE" }, { auth: true });
 }

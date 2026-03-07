@@ -1,7 +1,7 @@
 package com.opspilot.auth.service;
 
-import com.opspilot.auth.entity.AuthUser;
-import com.opspilot.auth.entity.RefreshSession;
+import com.opspilot.auth.domain.entity.AuthUser;
+import com.opspilot.auth.domain.entity.RefreshSession;
 import com.opspilot.auth.exception.UnauthorizedException;
 import com.opspilot.auth.repository.RefreshSessionRepository;
 import java.nio.charset.StandardCharsets;

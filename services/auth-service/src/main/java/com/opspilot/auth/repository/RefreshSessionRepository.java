@@ -1,6 +1,6 @@
 package com.opspilot.auth.repository;
 
-import com.opspilot.auth.entity.RefreshSession;
+import com.opspilot.auth.domain.entity.RefreshSession;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

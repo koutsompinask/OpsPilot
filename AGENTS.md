@@ -36,6 +36,15 @@ Rules:
 6. Correlation is required across service boundaries: generate/propagate `X-Request-Id` and include request IDs in logs.
 7. Do not log secrets: never log passwords, tokens, raw JWTs, or full sensitive payload bodies.
 
+## Service Package Convention (Implemented Services)
+1. Implemented backend services must use this top-level package structure under `com.opspilot.<service>`:
+   - `config`, `controller`, `service`, `repository`, `domain`, `dto`, `mapper`, `exception`, `security`, `util`
+2. Domain entities must live under `domain/entity` (not `entity` at the top level).
+3. Only create folders when they are relevant to actual code; do not add placeholder files only to satisfy structure.
+4. Subcategories must be nested under their parent domain package (examples: `service/storage`, `service/embedding`, `util/logging`, `service/integration`).
+5. Do not introduce ad-hoc top-level package folders (e.g. `client`, `logging`, `storage`, `embedding`, `messaging`, `chunking`, `entity`).
+6. Validate structure changes with `bash scripts/verify-service-structure.sh`.
+
 ## Local Run Script Maintenance
 1. Keep `scripts/start-local.sh` aligned with the current implementation state.
 2. When services move from stubs to real implementations, update this script to start the real processes and stop conflicting stubs.

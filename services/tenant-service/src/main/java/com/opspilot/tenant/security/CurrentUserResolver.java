@@ -1,6 +1,6 @@
 package com.opspilot.tenant.security;
 
-import com.opspilot.tenant.entity.Role;
+import com.opspilot.tenant.domain.entity.Role;
 import com.opspilot.tenant.exception.UnauthorizedException;
 import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;

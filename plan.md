@@ -63,6 +63,14 @@ Guidelines:
 * Services communicate through REST and messaging.
 * Infrastructure configs live under `/infra`.
 
+Backend package convention (implemented services):
+
+* Under `com.opspilot.<service>`, use top-level folders: `config`, `controller`, `service`, `repository`, `domain`, `dto`, `mapper`, `exception`, `security`, `util`.
+* Create only relevant folders for real code; avoid placeholder files used only for structure.
+* Keep entities under `domain/entity`.
+* Keep subcategories nested under their parent layer (examples: `service/storage`, `service/integration`, `util/logging`).
+* Do not use legacy ad-hoc top-level folders such as `entity`, `client`, `logging`, `chunking`, `embedding`, `messaging`, `storage`.
+
 ---
 
 # 2. Core Architecture

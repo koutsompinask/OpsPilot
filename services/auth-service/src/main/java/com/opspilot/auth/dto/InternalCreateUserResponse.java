@@ -1,6 +1,6 @@
 package com.opspilot.auth.dto;
 
-import com.opspilot.auth.entity.Role;
+import com.opspilot.auth.domain.entity.Role;
 import java.util.UUID;
 
 public record InternalCreateUserResponse(
