@@ -60,6 +60,23 @@ export type DocumentResponse = {
   updatedAt: string;
 };
 
+export type ChatAskRequest = {
+  question: string;
+  topK?: number;
+};
+
+export type ChatSourceResponse = {
+  document: string;
+  chunkId: string;
+};
+
+export type ChatAskResponse = {
+  answer: string;
+  confidence: number;
+  sources: ChatSourceResponse[];
+  ticketCreated: boolean;
+};
+
 async function parseErrorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as ApiErrorBody;
@@ -209,4 +226,11 @@ export async function getDocument(documentId: string): Promise<DocumentResponse>
 
 export async function deleteDocument(documentId: string): Promise<void> {
   return requestVoid(`/documents/${documentId}`, { method: "DELETE" }, { auth: true });
+}
+
+export async function askChat(payload: ChatAskRequest): Promise<ChatAskResponse> {
+  return requestJson<ChatAskResponse>("/chat/ask", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, { auth: true });
 }

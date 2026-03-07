@@ -6,10 +6,10 @@ const phaseTwoNavItems = [
   { to: "/tenant-users", label: "Tenant Users" },
   { to: "/tenant-settings", label: "Tenant Settings" },
   { to: "/documents", label: "Documents" },
+  { to: "/chat", label: "Chat" },
 ];
 
 const upcomingNavItems = [
-  { to: "/chat", label: "Chat" },
   { to: "/tickets", label: "Tickets" },
   { to: "/analytics", label: "Analytics" },
 ];
