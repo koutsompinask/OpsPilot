@@ -1,13 +1,14 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { EmptyState } from "../components/ui/EmptyState";
+import { ErrorState } from "../components/ui/ErrorState";
+import { LoadingState } from "../components/ui/LoadingState";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Panel } from "../components/ui/Panel";
+import { Sheet } from "../components/ui/Sheet";
+import { deleteDocument, getDocument, listDocuments, uploadDocument, type DocumentResponse, type DocumentStatus } from "../lib/api";
 import { getAuthClaims } from "../lib/auth";
-import {
-  deleteDocument,
-  getDocument,
-  listDocuments,
-  uploadDocument,
-  type DocumentResponse,
-  type DocumentStatus,
-} from "../lib/api";
 
 function formatTimestamp(value: string): string {
   const date = new Date(value);
@@ -17,14 +18,14 @@ function formatTimestamp(value: string): string {
   return date.toLocaleString();
 }
 
-function statusClasses(status: DocumentStatus): string {
+function toStatusVariant(status: DocumentStatus): "success" | "warning" | "error" {
   if (status === "READY") {
-    return "bg-green-100 text-green-800";
+    return "success";
   }
   if (status === "FAILED") {
-    return "bg-red-100 text-red-800";
+    return "error";
   }
-  return "bg-amber-100 text-amber-800";
+  return "warning";
 }
 
 export function DocumentsPage() {
@@ -33,7 +34,7 @@ export function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<DocumentResponse | null>(null);
-  const [activeDetailsId, setActiveDetailsId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -60,6 +61,15 @@ export function DocumentsPage() {
     void loadDocuments();
   }, [loadDocuments]);
 
+  const statusSummary = useMemo(() => {
+    return {
+      total: documents.length,
+      ready: documents.filter((doc) => doc.status === "READY").length,
+      processing: documents.filter((doc) => doc.status === "PROCESSING").length,
+      failed: documents.filter((doc) => doc.status === "FAILED").length,
+    };
+  }, [documents]);
+
   async function onUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedFile) {
@@ -74,7 +84,7 @@ export function DocumentsPage() {
     try {
       const created = await uploadDocument(selectedFile);
       setSelectedFile(null);
-      setSuccess(`Upload accepted for ${created.filename}. Status is ${created.status}.`);
+      setSuccess(`Upload accepted for ${created.filename}. Status: ${created.status}.`);
       await loadDocuments();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to upload document.";
@@ -85,14 +95,19 @@ export function DocumentsPage() {
   }
 
   async function onDelete(documentId: string) {
+    const confirmed = window.confirm("Delete this document permanently?");
+    if (!confirmed) {
+      return;
+    }
+
     setError(null);
     setSuccess(null);
     setDeletingId(documentId);
 
     try {
       await deleteDocument(documentId);
-      if (activeDetailsId === documentId) {
-        setActiveDetailsId(null);
+      if (selectedDetails?.id === documentId) {
+        setDetailsOpen(false);
         setSelectedDetails(null);
       }
       setSuccess("Document deleted.");
@@ -105,10 +120,10 @@ export function DocumentsPage() {
     }
   }
 
-  async function onViewDetails(documentId: string) {
+  async function openDetails(documentId: string) {
     setError(null);
     setIsLoadingDetails(true);
-    setActiveDetailsId(documentId);
+    setDetailsOpen(true);
 
     try {
       const details = await getDocument(documentId);
@@ -116,113 +131,125 @@ export function DocumentsPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load document details.";
       setError(message);
-      setActiveDetailsId(null);
     } finally {
       setIsLoadingDetails(false);
     }
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">Documents</h2>
-          <p className="text-sm text-slate-600">Upload and manage knowledge documents for Phase 3 ingestion (`.txt` and `.md`).</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void loadDocuments()}
-          className="rounded border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100"
-        >
-          Refresh
-        </button>
+    <section>
+      <PageHeader
+        title="Documents"
+        breadcrumb="Manage"
+        description="Upload tenant knowledge files and monitor ingestion status for AI retrieval."
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => void loadDocuments()}>
+              Refresh
+            </Button>
+            {isAdmin ? <Button onClick={() => document.getElementById("document-file")?.click()}>Upload document</Button> : null}
+          </>
+        }
+      />
+
+      {error ? <ErrorState message={error} onRetry={() => void loadDocuments()} /> : null}
+      {success ? <p className="mb-4 rounded-lg border border-emerald-400 bg-emerald-500 px-3 py-2 text-sm text-white">{success}</p> : null}
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <Panel className="border-sky-400 bg-sky-500 p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">Total</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{statusSummary.total}</p>
+        </Panel>
+        <Panel className="border-emerald-400 bg-emerald-500 p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">Indexed</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{statusSummary.ready}</p>
+        </Panel>
+        <Panel className="border-amber-400 bg-amber-500 p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">Processing</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{statusSummary.processing}</p>
+        </Panel>
+        <Panel className="border-rose-400 bg-rose-500 p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">Failed</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{statusSummary.failed}</p>
+        </Panel>
       </div>
 
-      {!isAdmin ? (
-        <p className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
-          Your role is read-only for documents. Tenant admins can upload and delete.
-        </p>
-      ) : null}
-
       {isAdmin ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Upload Document</h3>
-          <form className="mt-4 flex flex-col gap-3 md:flex-row md:items-end" onSubmit={onUpload}>
-            <div className="flex-1">
-              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="document-file">
-                File
-              </label>
-              <input
-                id="document-file"
-                type="file"
-                accept=".txt,.md,text/plain,text/markdown"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isUploading}
-              className="inline-flex rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+        <Panel className="mt-5">
+          <h3 className="text-lg font-semibold text-foreground">Upload document</h3>
+          <p className="mt-1 text-sm text-muted">Supported formats: `.txt`, `.md`.</p>
+          <form className="mt-4" onSubmit={onUpload}>
+            <label
+              htmlFor="document-file"
+              className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-4 py-8 text-center transition-colors hover:border-amber-400"
             >
-              {isUploading ? "Uploading..." : "Upload"}
-            </button>
+              <span className="text-sm font-medium text-foreground">Drop file here or click to browse</span>
+              <span className="mt-1 text-xs text-muted">{selectedFile ? selectedFile.name : "No file selected"}</span>
+            </label>
+            <input
+              id="document-file"
+              type="file"
+              accept=".txt,.md,text/plain,text/markdown"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              className="sr-only"
+            />
+            <div className="mt-4 flex justify-end">
+              <Button type="submit" disabled={isUploading || !selectedFile}>
+                {isUploading ? "Uploading..." : "Upload"}
+              </Button>
+            </div>
           </form>
-        </div>
-      ) : null}
+        </Panel>
+      ) : (
+        <Panel className="mt-5">
+          <p className="text-sm text-muted">Your role is read-only for documents. Tenant admins can upload and delete files.</p>
+        </Panel>
+      )}
 
-      {error ? <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{success}</p> : null}
+      <Panel className="mt-5">
+        <h3 className="text-lg font-semibold text-foreground">Document list</h3>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-semibold">Document List</h3>
+        {isLoading ? <LoadingState label="Loading documents..." /> : null}
 
-        {isLoading ? (
-          <p className="mt-4 text-sm text-slate-600">Loading documents...</p>
-        ) : documents.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-600">No documents uploaded yet.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead>
-                <tr className="text-left text-slate-600">
-                  <th className="px-3 py-2 font-medium">Filename</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Chunks</th>
-                  <th className="px-3 py-2 font-medium">Updated</th>
-                  <th className="px-3 py-2 font-medium">Actions</th>
+        {!isLoading && documents.length === 0 ? (
+          <EmptyState title="No documents uploaded" description="Upload your first document to enable grounded AI answers." />
+        ) : null}
+
+        {!isLoading && documents.length > 0 ? (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-surface-elevated text-left text-muted">
+                <tr>
+                  <th className="px-3 py-2.5 font-medium">Filename</th>
+                  <th className="px-3 py-2.5 font-medium">Status</th>
+                  <th className="px-3 py-2.5 font-medium">Chunks</th>
+                  <th className="px-3 py-2.5 font-medium">Updated</th>
+                  <th className="px-3 py-2.5 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border/80 bg-surface">
                 {documents.map((document) => (
                   <tr key={document.id}>
-                    <td className="px-3 py-2">{document.filename}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClasses(document.status)}`}>
-                        {document.status}
-                      </span>
+                    <td className="px-3 py-3 font-medium text-foreground">{document.filename}</td>
+                    <td className="px-3 py-3">
+                      <Badge variant={toStatusVariant(document.status)}>{document.status}</Badge>
                     </td>
-                    <td className="px-3 py-2">{document.chunkCount ?? "-"}</td>
-                    <td className="px-3 py-2">{formatTimestamp(document.updatedAt)}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-3 text-muted">{document.chunkCount ?? "-"}</td>
+                    <td className="px-3 py-3 text-muted">{formatTimestamp(document.updatedAt)}</td>
+                    <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void onViewDetails(document.id)}
-                          className="rounded border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100"
-                        >
-                          View details
-                        </button>
+                        <Button variant="ghost" size="sm" onClick={() => void openDetails(document.id)}>
+                          View
+                        </Button>
                         {isAdmin ? (
-                          <button
-                            type="button"
+                          <Button
+                            variant="destructive"
+                            size="sm"
                             disabled={deletingId === document.id}
                             onClick={() => void onDelete(document.id)}
-                            className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
                           >
                             {deletingId === document.id ? "Deleting..." : "Delete"}
-                          </button>
+                          </Button>
                         ) : null}
                       </div>
                     </td>
@@ -231,53 +258,56 @@ export function DocumentsPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        ) : null}
+      </Panel>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold">Selected Document Details</h3>
-          {isLoadingDetails ? <span className="text-xs text-slate-500">Refreshing...</span> : null}
-        </div>
-        {!selectedDetails ? (
-          <p className="mt-3 text-sm text-slate-600">Select a document row and click "View details".</p>
-        ) : (
-          <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+      <Sheet
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        title="Document details"
+        description="Metadata and ingestion status"
+      >
+        {isLoadingDetails ? <LoadingState label="Loading details..." /> : null}
+
+        {!isLoadingDetails && !selectedDetails ? (
+          <p className="text-sm text-muted">Select a document to view metadata.</p>
+        ) : null}
+
+        {!isLoadingDetails && selectedDetails ? (
+          <dl className="grid gap-3 text-sm md:grid-cols-2">
             <div>
-              <dt className="text-slate-600">ID</dt>
-              <dd className="break-all text-xs text-slate-900">{selectedDetails.id}</dd>
+              <dt className="text-xs uppercase tracking-wide text-muted">ID</dt>
+              <dd className="mt-1 break-all font-mono text-xs text-foreground">{selectedDetails.id}</dd>
             </div>
             <div>
-              <dt className="text-slate-600">Filename</dt>
-              <dd>{selectedDetails.filename}</dd>
+              <dt className="text-xs uppercase tracking-wide text-muted">Filename</dt>
+              <dd className="mt-1 text-foreground">{selectedDetails.filename}</dd>
             </div>
             <div>
-              <dt className="text-slate-600">Content Type</dt>
-              <dd>{selectedDetails.contentType}</dd>
+              <dt className="text-xs uppercase tracking-wide text-muted">Content type</dt>
+              <dd className="mt-1 text-foreground">{selectedDetails.contentType}</dd>
             </div>
             <div>
-              <dt className="text-slate-600">Status</dt>
-              <dd>{selectedDetails.status}</dd>
+              <dt className="text-xs uppercase tracking-wide text-muted">Status</dt>
+              <dd className="mt-1">
+                <Badge variant={toStatusVariant(selectedDetails.status)}>{selectedDetails.status}</Badge>
+              </dd>
             </div>
             <div>
-              <dt className="text-slate-600">Chunk Count</dt>
-              <dd>{selectedDetails.chunkCount ?? "-"}</dd>
+              <dt className="text-xs uppercase tracking-wide text-muted">Chunk count</dt>
+              <dd className="mt-1 text-foreground">{selectedDetails.chunkCount ?? "-"}</dd>
             </div>
             <div>
-              <dt className="text-slate-600">Created</dt>
-              <dd>{formatTimestamp(selectedDetails.createdAt)}</dd>
+              <dt className="text-xs uppercase tracking-wide text-muted">Updated</dt>
+              <dd className="mt-1 text-foreground">{formatTimestamp(selectedDetails.updatedAt)}</dd>
             </div>
-            <div>
-              <dt className="text-slate-600">Updated</dt>
-              <dd>{formatTimestamp(selectedDetails.updatedAt)}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-600">Error</dt>
-              <dd>{selectedDetails.errorMessage ?? "-"}</dd>
+            <div className="md:col-span-2">
+              <dt className="text-xs uppercase tracking-wide text-muted">Processing error</dt>
+              <dd className="mt-1 text-foreground">{selectedDetails.errorMessage ?? "No processing errors"}</dd>
             </div>
           </dl>
-        )}
-      </div>
+        ) : null}
+      </Sheet>
     </section>
   );
 }

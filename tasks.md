@@ -1,10 +1,23 @@
 ## Pending
 - [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
+- [ ] Phase 6: Frontend redesign polish follow-ups (post-implementation adjustments)
 
 ## To-Do
 - [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
 
 ## Done
+- [x] Phase 6 typing bugfix: prevented typing animation restarts on rerender by stabilizing completion callback handling in `TypingText`
+- [x] Phase 6 animation tweak: landing-page typed text now runs sequentially (badge -> title -> subtext) instead of parallel
+- [x] Phase 6 animation refinement: switched text animation to typing effect (landing + chat answers) and slowed fade/enter timings
+- [x] Phase 6 follow-up: removed blue label-pill backgrounds and added animations for landing text, shared cards/panels, and chat answer text
+- [x] Implemented Phase 6 visual system foundation in frontend (slate + amber tokens, typography, motion defaults, accessibility focus styles)
+- [x] Added shared frontend UI primitives (`Button`, `Badge`, `Card`, `Panel`, `PageHeader`, `EmptyState`, `LoadingState`, `ErrorState`, `Sheet`) and utility class combiner
+- [x] Redesigned app shell with grouped sidebar navigation, active route states, mobile drawer, and user identity/logout card
+- [x] Redesigned implemented routes while preserving existing auth guards and API integration (`/login`, `/register`, `/dashboard`, `/tenant-users`, `/tenant-settings`, `/documents`, `/chat`)
+- [x] Kept unimplemented frontend feature routes intentionally blank with styled empty panels (`/tickets`, `/analytics`)
+- [x] Phase 6 visual polish fix: enforced readable form control/autofill text colors and increased semantic color presence across dark theme surfaces
+- [x] Phase 6 UI contrast/color enhancement: introduced shared high-contrast form classes and made buttons/badges/labels visibly more colorful on key pages (register/chat/users/settings)
+- [x] Phase 6 color rendering hardening: replaced custom semantic Tailwind color usage with built-in palette classes and explicit CSS colors to avoid no-color states in dev runtime
 - [x] Session initialized with `plan.md` + `AGENTS.md` review
 - [x] Created monorepo Phase 1 structure (`frontend`, `services/*`, `infra/*`, `docs/*`, `scripts`)
 - [x] Added root scaffold files: `README.md`, `settings.gradle`, `build.gradle`, `gradle.properties`, `.env.example`, `docker-compose.yml`
@@ -92,3 +105,11 @@
 - `cd frontend && npm run build` succeeded on 2026-03-07 after Chat page/API integration.
 - `bash -n scripts/start-local.sh` and `bash scripts/verify-service-structure.sh` both succeeded on 2026-03-07 after Phase 4 startup + structure updates.
 - Isolated full alt-port Phase 4 smoke script `/tmp/opspilot-phase4-smoke-full-alt.sh` succeeded on 2026-03-07 with `CHAT_CONFIDENCE=0.503`, `CHAT_SOURCES=1`, `CHAT_TICKET_CREATED=False`, and unauthenticated `/chat/ask` returning `401`.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after Phase 6 redesign implementation (new app shell, shared UI primitives, and route redesign with blank `/tickets` + `/analytics`).
+- `cd frontend && npm run build` succeeded on 2026-03-07 after Phase 6 color/readability polish (input/autofill contrast + stronger semantic color accents).
+- `cd frontend && npm run build` succeeded on 2026-03-07 after additional contrast/color pass (shared `.app-*` form control styles + vivid buttons/badges/labels).
+- `cd frontend && npm run build` succeeded on 2026-03-07 after switching semantic UI colors to built-in Tailwind palette classes (amber/sky/emerald/rose).
+- `cd frontend && npm run build` succeeded on 2026-03-07 after removing label pill backgrounds and adding motion for landing text, shared cards/panels, and chat answer text animations.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after replacing text motion with typing effect (landing + chat answers) and slowing fade/enter animation timings.
+- `cd frontend && npm run build` succeeded on 2026-03-07 after making landing-page typing animation sequential (badge, then header, then subtext).
+- `cd frontend && npm run build` succeeded on 2026-03-07 after fixing typing rerender restarts by removing unstable callback dependency from `TypingText` effect.

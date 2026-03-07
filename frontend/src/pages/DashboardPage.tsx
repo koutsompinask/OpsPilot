@@ -1,23 +1,41 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Card } from "../components/ui/Card";
+import { ErrorState } from "../components/ui/ErrorState";
+import { LoadingState } from "../components/ui/LoadingState";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Panel } from "../components/ui/Panel";
+import { Button } from "../components/ui/Button";
+import { getMyTenant, listDocuments, listUsers, type TenantResponse, type UserResponse } from "../lib/api";
 import { getAuthClaims } from "../lib/auth";
-import { getMyTenant, listUsers, type TenantResponse, type UserResponse } from "../lib/api";
+
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString();
+}
 
 export function DashboardPage() {
   const claims = getAuthClaims();
+  const isAdmin = claims?.role === "TENANT_ADMIN";
+
   const [tenant, setTenant] = useState<TenantResponse | null>(null);
   const [users, setUsers] = useState<UserResponse[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [documentsCount, setDocumentsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setError(null);
     setIsLoading(true);
 
     try {
-      const tenantData = await getMyTenant();
+      const [tenantData, docs] = await Promise.all([getMyTenant(), listDocuments()]);
       setTenant(tenantData);
+      setDocumentsCount(docs.length);
 
-      if (claims?.role === "TENANT_ADMIN") {
+      if (isAdmin) {
         const userData = await listUsers();
         setUsers(userData);
       } else {
@@ -29,50 +47,111 @@ export function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [claims?.role]);
+  }, [isAdmin]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
+  const metrics = useMemo(
+    () => [
+      {
+        label: "Total documents",
+        value: String(documentsCount),
+        trend: "+2 this week",
+        tone: "border-sky-400 bg-sky-500 text-white",
+      },
+      {
+        label: "Total users",
+        value: isAdmin ? String(users.length) : "Member",
+        trend: isAdmin ? "Active tenant users" : "Admin managed",
+        tone: "border-emerald-400 bg-emerald-500 text-white",
+      },
+      {
+        label: "Tickets open",
+        value: "0",
+        trend: "Support workflow pending",
+        tone: "border-amber-400 bg-amber-500 text-slate-950",
+      },
+      {
+        label: "Chat queries today",
+        value: "0",
+        trend: "Analytics pending",
+        tone: "border-amber-400 bg-amber-500 text-slate-950",
+      },
+    ],
+    [documentsCount, isAdmin, users.length],
+  );
+
   return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">Phase 2 Dashboard</h2>
-          <p className="text-sm text-slate-600">Tenant and user management summary for auth + tenant services.</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void loadData()}
-          className="rounded border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100"
-        >
-          Refresh
-        </button>
-      </div>
+    <section>
+      <PageHeader
+        title={tenant?.name ?? "Tenant dashboard"}
+        breadcrumb="Core"
+        description="Operational snapshot of your workspace, users, and document knowledge base."
+        actions={
+          <Button variant="ghost" onClick={() => void loadData()}>
+            Refresh
+          </Button>
+        }
+      />
 
-      {error ? <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <ErrorState message={error} onRetry={() => void loadData()} /> : null}
+      {isLoading ? <LoadingState label="Loading dashboard..." /> : null}
 
-      {isLoading ? (
-        <p className="text-sm text-slate-600">Loading dashboard...</p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-3">
-          <article className="rounded border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-600">Tenant Name</h3>
-            <p className="mt-2 text-lg font-semibold">{tenant?.name ?? "-"}</p>
-          </article>
+      {!isLoading && !error ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((metric) => (
+              <Card key={metric.label} className={`border ${metric.tone}`}>
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">{metric.label}</p>
+                <p className="mt-3 text-3xl font-semibold">{metric.value}</p>
+                <p className="mt-2 text-xs text-muted">{metric.trend}</p>
+              </Card>
+            ))}
+          </div>
 
-          <article className="rounded border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-600">Tenant ID</h3>
-            <p className="mt-2 break-all text-xs text-slate-800">{tenant?.id ?? "-"}</p>
-          </article>
+          <div className="mt-5 grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+            <Panel>
+              <h3 className="text-lg font-semibold text-foreground">Recent user activity</h3>
+              <p className="mt-1 text-sm text-muted">Latest tenant members currently in your workspace.</p>
+              <div className="mt-4 space-y-3">
+                {users.slice(0, 5).map((user) => (
+                  <div key={user.userId} className="flex items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{user.displayName}</p>
+                      <p className="text-xs text-muted">{user.email}</p>
+                    </div>
+                    <p className="text-xs uppercase tracking-wide text-muted">{user.role}</p>
+                  </div>
+                ))}
+                {users.length === 0 ? <p className="text-sm text-muted">No user activity available yet.</p> : null}
+              </div>
+            </Panel>
 
-          <article className="rounded border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-600">Users</h3>
-            <p className="mt-2 text-lg font-semibold">{claims?.role === "TENANT_ADMIN" ? users.length : "Admin only"}</p>
-          </article>
-        </div>
-      )}
+            <Panel>
+              <h3 className="text-lg font-semibold text-foreground">Quick actions</h3>
+              <p className="mt-1 text-sm text-muted">Jump to the workflows used most often.</p>
+              <div className="mt-4 space-y-3 text-sm text-foreground">
+                <div className="rounded-xl border border-sky-400 bg-sky-500 p-3 text-white">
+                  <p className="font-medium">Upload a new knowledge document</p>
+                  <p className="mt-1 text-xs text-muted">Keep AI answers grounded in current policies.</p>
+                </div>
+                <div className="rounded-xl border border-emerald-400 bg-emerald-500 p-3 text-white">
+                  <p className="font-medium">Invite a tenant user</p>
+                  <p className="mt-1 text-xs text-muted">Onboard operators with role-based access.</p>
+                </div>
+                <div className="rounded-xl border border-amber-400 bg-amber-500 p-3 text-slate-950">
+                  <p className="font-medium">Ask the assistant</p>
+                  <p className="mt-1 text-xs text-muted">Validate coverage with representative customer questions.</p>
+                </div>
+                <p className="pt-2 text-xs text-muted">Tenant ID: {tenant?.id ?? "-"}</p>
+                <p className="text-xs text-muted">Last refreshed: {formatShortDate(new Date().toISOString())}</p>
+              </div>
+            </Panel>
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }
