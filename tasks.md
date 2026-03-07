@@ -6,6 +6,7 @@
 - [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
 
 ## Done
+- [x] Frontend docs: converted `frontend/guideline.md` from one-off redesign prompt into reusable general frontend guidelines
 - [x] Phase 6 typing bugfix: prevented typing animation restarts on rerender by stabilizing completion callback handling in `TypingText`
 - [x] Phase 6 animation tweak: landing-page typed text now runs sequentially (badge -> title -> subtext) instead of parallel
 - [x] Phase 6 animation refinement: switched text animation to typing effect (landing + chat answers) and slowed fade/enter timings
@@ -113,3 +114,4 @@
 - `cd frontend && npm run build` succeeded on 2026-03-07 after replacing text motion with typing effect (landing + chat answers) and slowing fade/enter animation timings.
 - `cd frontend && npm run build` succeeded on 2026-03-07 after making landing-page typing animation sequential (badge, then header, then subtext).
 - `cd frontend && npm run build` succeeded on 2026-03-07 after fixing typing rerender restarts by removing unstable callback dependency from `TypingText` effect.
+- `test -s frontend/guideline.md` and `rg -n \"^# Frontend Guidelines|^## 4\\. Reusable Components|^## 9\\. Implementation Checklist\" frontend/guideline.md` succeeded on 2026-03-07 after converting the document into a reusable frontend guideline.
