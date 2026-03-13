@@ -80,5 +80,5 @@ Run timestamp: 2026-03-13 (Europe/Athens)
 - webhook receiver captured both `ticket.created` and `document.processed` notifications
 
 ## Notes
-- Phase 5 is backend-only; the frontend `/tickets` page remains intentionally unchanged in this phase.
+- This ledger captures the Phase 5 backend verification state on 2026-03-13. The frontend `/tickets` workspace was implemented later in Phase 6A.
 - Webhook delivery is best-effort in Phase 5: failures are logged and acknowledged without retry persistence.

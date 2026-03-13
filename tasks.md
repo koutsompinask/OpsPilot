@@ -5,6 +5,8 @@
 - [ ] No active implementation task in progress
 
 ## Done
+- [x] Phase 6A: implemented `/tickets` frontend workspace with editorial support-radar hero, searchable/filterable queue, detail panel, and role-aware admin status controls
+- [x] Phase 6A: added frontend ticket API client/types and updated frontend guidance/README to reflect the live tickets route
 - [x] Phase 5: implemented `ticket-service` persistence, auth, APIs, and `TicketCreated` event publishing
 - [x] Phase 5: wired `ai-orchestrator-service` low-confidence fallback to create tickets and return accurate `ticketCreated`
 - [x] Phase 5: implemented `notification-service` RabbitMQ consumers and generic webhook delivery for `ticket.created` and `document.processed`
@@ -123,3 +125,4 @@
 - `cd frontend && npm run build` succeeded on 2026-03-07 after making landing-page typing animation sequential (badge, then header, then subtext).
 - `cd frontend && npm run build` succeeded on 2026-03-07 after fixing typing rerender restarts by removing unstable callback dependency from `TypingText` effect.
 - `test -s frontend/guideline.md` and `rg -n \"^# Frontend Guidelines|^## 4\\. Reusable Components|^## 9\\. Implementation Checklist\" frontend/guideline.md` succeeded on 2026-03-07 after converting the document into a reusable frontend guideline.
+- `cd frontend && npm run build` succeeded on 2026-03-13 after implementing the `/tickets` support workspace (ticket API types, list/detail layout, filters, and admin status management UI).

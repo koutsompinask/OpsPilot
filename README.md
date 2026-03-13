@@ -1,8 +1,8 @@
 # OpsPilot Monorepo (Phase 5 Backend)
 
-Current state provides the baseline monorepo scaffold plus implemented backend flows through Phase 5:
+Current state provides the baseline monorepo scaffold plus implemented backend flows through Phase 5 plus the first Phase 6 frontend ticket workspace:
 - Gradle multi-project Spring Boot service skeletons
-- React + Vite + TypeScript + Tailwind frontend app with complete minimal Phase 2 flow
+- React + Vite + TypeScript + Tailwind frontend app with implemented auth, dashboard, documents, chat, and tickets flows
 - Local infrastructure with Docker Compose
 - Placeholder infra/docs directories for later phases
 - JWT authentication with register/login/refresh in `auth-service`
@@ -64,7 +64,8 @@ Phase 2 UI routes:
 
 - Most services are still skeleton-only; `auth-service`, `tenant-service`, `knowledge-base-service`, `ai-orchestrator-service`, and `api-gateway` now include implemented behavior.
 - `ticket-service` and `notification-service` are now implemented for the Phase 5 backend support workflow.
-- Frontend `/tickets` remains intentionally placeholder in this phase; backend support workflow is complete before dashboard UI work.
+- Frontend `/tickets` now exposes the support queue workspace for tenant users, with admin-only status management and answer-context review.
+- Frontend `/analytics` remains intentionally placeholder pending a dedicated implementation phase.
 - Business endpoints and cross-service workflows are added in later phases.
 - Health endpoint baseline: `/actuator/health`.
 - If UI requests fail with `ERR_CONNECTION_REFUSED`, start the local stack first (`./scripts/start-local.sh .env`).

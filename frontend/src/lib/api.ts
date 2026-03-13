@@ -77,6 +77,26 @@ export type ChatAskResponse = {
   ticketCreated: boolean;
 };
 
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
+
+export type TicketOrigin = "CHAT_LOW_CONFIDENCE" | "MANUAL";
+
+export type TicketResponse = {
+  id: string;
+  tenantId: string;
+  createdByUserId: string;
+  createdByEmail: string;
+  origin: TicketOrigin;
+  status: TicketStatus;
+  question: string;
+  answer: string | null;
+  confidence: number | null;
+  sourceCount: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 async function parseErrorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as ApiErrorBody;
@@ -232,5 +252,16 @@ export async function askChat(payload: ChatAskRequest): Promise<ChatAskResponse>
   return requestJson<ChatAskResponse>("/chat/ask", {
     method: "POST",
     body: JSON.stringify(payload),
+  }, { auth: true });
+}
+
+export async function listTickets(): Promise<TicketResponse[]> {
+  return requestJson<TicketResponse[]>("/tickets", { method: "GET" }, { auth: true });
+}
+
+export async function updateTicketStatus(ticketId: string, status: TicketStatus): Promise<TicketResponse> {
+  return requestJson<TicketResponse>(`/tickets/${ticketId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
   }, { auth: true });
 }

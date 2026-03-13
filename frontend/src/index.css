@@ -150,6 +150,135 @@ select:-webkit-autofill:focus {
     animation: chat-answer-reveal 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
     transform-origin: left center;
   }
+
+  .tickets-page {
+    position: relative;
+  }
+
+  .tickets-page::before {
+    content: "";
+    position: absolute;
+    inset: -2rem 0 auto;
+    height: 24rem;
+    background:
+      radial-gradient(circle at 12% 24%, rgba(245, 158, 11, 0.12), transparent 28%),
+      radial-gradient(circle at 88% 14%, rgba(56, 189, 248, 0.12), transparent 32%);
+    pointer-events: none;
+    filter: blur(10px);
+  }
+
+  .tickets-radar {
+    position: relative;
+    border-color: rgba(148, 163, 184, 0.18);
+    background:
+      linear-gradient(135deg, rgba(8, 12, 20, 0.92), rgba(17, 24, 39, 0.94)),
+      radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 34%),
+      radial-gradient(circle at left center, rgba(245, 158, 11, 0.12), transparent 28%);
+  }
+
+  .tickets-radar__glow {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(120deg, rgba(245, 158, 11, 0.04), transparent 32%, rgba(56, 189, 248, 0.06) 68%, transparent 100%);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .tickets-eyebrow {
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18);
+  }
+
+  .tickets-stat {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    padding: 1rem;
+    backdrop-filter: blur(18px);
+  }
+
+  .tickets-stat::after {
+    content: "";
+    position: absolute;
+    inset: auto -10% -45% auto;
+    height: 6rem;
+    width: 6rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+    filter: blur(10px);
+  }
+
+  .tickets-stat--sky {
+    background: linear-gradient(180deg, rgba(14, 165, 233, 0.18), rgba(15, 23, 42, 0.4));
+  }
+
+  .tickets-stat--amber {
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.18), rgba(15, 23, 42, 0.4));
+  }
+
+  .tickets-stat--sky-soft {
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.14), rgba(15, 23, 42, 0.4));
+  }
+
+  .tickets-stat--emerald {
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.18), rgba(15, 23, 42, 0.4));
+  }
+
+  .tickets-stat__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #cbd5e1;
+  }
+
+  .tickets-stat__value {
+    margin-top: 0.75rem;
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    color: rgb(var(--color-foreground));
+  }
+
+  .tickets-stat__copy {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #cbd5e1;
+  }
+
+  .tickets-briefing {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border-radius: 1.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.54));
+    padding: 1.5rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .tickets-row {
+    position: relative;
+  }
+
+  .tickets-row::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.7));
+    opacity: 0;
+    transition: opacity 180ms ease-out;
+  }
+
+  .tickets-row:hover::before,
+  .tickets-row:focus-visible::before {
+    opacity: 1;
+  }
 }
 
 ::selection {

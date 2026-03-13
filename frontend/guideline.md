@@ -78,7 +78,8 @@ Preserve these route intents:
 - `/tenant-settings`: safe settings editing with clear save feedback.
 - `/documents`: upload-focused workflow, status visibility, details panel.
 - `/chat`: conversation-first layout, confidence visibility, sources, and low-confidence guidance.
-- `/tickets`, `/analytics`: keep intentionally blank/placeholder until full implementation tasks are requested.
+- `/tickets`: support queue workspace with strong hierarchy, list/detail review flow, filters, and admin-only status controls.
+- `/analytics`: keep intentionally blank/placeholder until a dedicated implementation task is requested.
 
 ## 8. Accessibility Baseline
 - Maintain WCAG AA contrast where possible.
