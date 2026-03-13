@@ -1,11 +1,15 @@
 ## Pending
-- [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
 - [ ] Phase 6: Frontend redesign polish follow-ups (post-implementation adjustments)
 
 ## To-Do
-- [ ] Phase 5: Support workflow (ticket creation, RabbitMQ events, notifications)
+- [ ] No active implementation task in progress
 
 ## Done
+- [x] Phase 5: implemented `ticket-service` persistence, auth, APIs, and `TicketCreated` event publishing
+- [x] Phase 5: wired `ai-orchestrator-service` low-confidence fallback to create tickets and return accurate `ticketCreated`
+- [x] Phase 5: implemented `notification-service` RabbitMQ consumers and generic webhook delivery for `ticket.created` and `document.processed`
+- [x] Phase 5: updated gateway, local startup, compose/env/docs, and verified package-structure/runtime checks
+- [x] Phase 5: fixed backend verification gaps (`verify-service-structure`, Phase 5 ledger, startup readiness checks, task tracker) and reran verification evidence
 - [x] Frontend docs: converted `frontend/guideline.md` from one-off redesign prompt into reusable general frontend guidelines
 - [x] Phase 6 typing bugfix: prevented typing animation restarts on rerender by stabilizing completion callback handling in `TypingText`
 - [x] Phase 6 animation tweak: landing-page typed text now runs sequentially (badge -> title -> subtext) instead of parallel
@@ -75,6 +79,10 @@
 - [x] Updated tenant testing question files with expected outputs and explicit confidence expectations (`should answer correctly` vs `should not answer correctly / have low confidence`)
 
 ### Review
+- `bash scripts/verify-service-structure.sh` succeeded on 2026-03-13 after adding `ticket-service` and `notification-service` to the implemented-service verifier.
+- `bash -n scripts/start-local.sh` succeeded on 2026-03-13 after adding readiness checks for `ticket-service` and `notification-service`.
+- `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:ticket-service:test :services:notification-service:test :services:ai-orchestrator-service:test :services:api-gateway:test` succeeded on 2026-03-13.
+- End-to-end Phase 5 smoke on 2026-03-13 succeeded through gateway: tenant register, member create/login, document upload -> `READY`, unsupported `/chat/ask` -> `ticketCreated=true` with `confidence=0.513`, admin/member `GET /tickets` -> `200`, member `PATCH /tickets/{id}/status` -> `403`, admin patch -> `RESOLVED`, `notification-service` logged receipt + webhook delivery for both `ticket.created` and `document.processed`, and `docker logs opspilot-webhook-receiver-1` contained both event types.
 - `docker compose --env-file .env.example up -d` and `docker compose --env-file .env.example --profile apps up -d` both start successfully with standard port mappings (`5173`, `8080-8087`, `5432`, `6379`, `5672`, `15672`, `9000`, `9001`).
 - `./gradlew test` passes after dependency correction; prior failures were caused by stale ownership/network environment issues and an invalid gateway starter artifact.
 - `npm run build` completes successfully with Vite output under `frontend/dist`.

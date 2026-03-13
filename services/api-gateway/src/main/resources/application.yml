@@ -35,6 +35,10 @@ spring:
           uri: ${AI_ORCHESTRATOR_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/chat/**
+        - id: ticket-service
+          uri: ${TICKET_SERVICE_BASE_URL:http://localhost:8085}
+          predicates:
+            - Path=/tickets/**
 
 server:
   port: 8080

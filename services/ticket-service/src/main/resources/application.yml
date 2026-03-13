@@ -1,6 +1,31 @@
 spring:
   application:
     name: ticket-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:opspilot}?currentSchema=ticket
+    username: ${POSTGRES_USER:opspilot}
+    password: ${POSTGRES_PASSWORD:opspilot}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ticket
+    open-in-view: false
+  flyway:
+    enabled: true
+    default-schema: ticket
+    schemas: ticket
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 server:
   port: 8085
@@ -10,3 +35,10 @@ management:
     web:
       exposure:
         include: health,info
+
+ticket:
+  service-token: ${INTERNAL_SERVICE_TOKEN:opspilot-internal-dev-token}
+  messaging:
+    enabled: ${TICKET_MESSAGING_ENABLED:true}
+    ticket-created-exchange: ${TICKET_CREATED_EXCHANGE:opspilot.events}
+    ticket-created-routing-key: ${TICKET_CREATED_ROUTING_KEY:ticket.created}

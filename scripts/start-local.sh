@@ -140,13 +140,13 @@ echo "[info] Starting required Docker services (infra + current backend stubs)..
 
 # Stop placeholder containers that would conflict with real app processes
 # (same ports as the Spring Boot and frontend dev servers).
-docker compose --env-file "$ENV_FILE" stop api-gateway auth-service tenant-service knowledge-base-service ai-orchestrator-service frontend >/dev/null 2>&1 || true
+docker compose --env-file "$ENV_FILE" stop api-gateway auth-service tenant-service knowledge-base-service ai-orchestrator-service ticket-service notification-service frontend >/dev/null 2>&1 || true
 
 # Start infra + still-stubbed backend services.
 # Real services (gateway/auth/tenant/knowledge-base/ai-orchestrator) are started below via Gradle.
 docker compose --env-file "$ENV_FILE" up -d \
-  postgres redis rabbitmq minio \
-  ticket-service notification-service analytics-service
+  postgres redis rabbitmq minio webhook-receiver \
+  analytics-service
 
 # Shared environment for real backend services launched via Gradle bootRun.
 COMMON_ENV=(
@@ -156,6 +156,7 @@ COMMON_ENV=(
   "TENANT_SERVICE_BASE_URL=${TENANT_SERVICE_BASE_URL:-http://localhost:${TENANT_SERVICE_PORT:-8082}}"
   "KNOWLEDGE_BASE_SERVICE_URL=${KNOWLEDGE_BASE_SERVICE_URL:-http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}}"
   "AI_ORCHESTRATOR_SERVICE_URL=${AI_ORCHESTRATOR_SERVICE_URL:-http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}}"
+  "TICKET_SERVICE_BASE_URL=${TICKET_SERVICE_BASE_URL:-http://localhost:${TICKET_SERVICE_PORT:-8085}}"
   "POSTGRES_HOST=${POSTGRES_HOST:-localhost}"
   "POSTGRES_PORT=${POSTGRES_PORT:-5432}"
   "POSTGRES_DB=${POSTGRES_DB:-opspilot}"
@@ -181,8 +182,21 @@ COMMON_ENV=(
   "AI_CHAT_DEFAULT_TOP_K=${AI_CHAT_DEFAULT_TOP_K:-4}"
   "AI_CHAT_LOW_CONFIDENCE_THRESHOLD=${AI_CHAT_LOW_CONFIDENCE_THRESHOLD:-0.55}"
   "KNOWLEDGE_MESSAGING_ENABLED=${KNOWLEDGE_MESSAGING_ENABLED:-true}"
+  "TICKET_MESSAGING_ENABLED=${TICKET_MESSAGING_ENABLED:-true}"
+  "TICKET_CREATED_EXCHANGE=${TICKET_CREATED_EXCHANGE:-opspilot.events}"
+  "TICKET_CREATED_ROUTING_KEY=${TICKET_CREATED_ROUTING_KEY:-ticket.created}"
   "DOCUMENT_PROCESSED_EXCHANGE=${DOCUMENT_PROCESSED_EXCHANGE:-opspilot.events}"
   "DOCUMENT_PROCESSED_ROUTING_KEY=${DOCUMENT_PROCESSED_ROUTING_KEY:-document.processed}"
+  "NOTIFICATION_EXCHANGE=${NOTIFICATION_EXCHANGE:-opspilot.events}"
+  "NOTIFICATION_MESSAGING_ENABLED=${NOTIFICATION_MESSAGING_ENABLED:-true}"
+  "NOTIFICATION_TICKET_CREATED_QUEUE=${NOTIFICATION_TICKET_CREATED_QUEUE:-notification.ticket.created}"
+  "NOTIFICATION_DOCUMENT_PROCESSED_QUEUE=${NOTIFICATION_DOCUMENT_PROCESSED_QUEUE:-notification.document.processed}"
+  "NOTIFICATION_WEBHOOK_ENABLED=${NOTIFICATION_WEBHOOK_ENABLED:-true}"
+  "NOTIFICATION_WEBHOOK_URL=${NOTIFICATION_WEBHOOK_URL:-http://localhost:${WEBHOOK_RECEIVER_PORT:-8090}/events}"
+  "NOTIFICATION_WEBHOOK_AUTH_HEADER_NAME=${NOTIFICATION_WEBHOOK_AUTH_HEADER_NAME:-}"
+  "NOTIFICATION_WEBHOOK_AUTH_HEADER_VALUE=${NOTIFICATION_WEBHOOK_AUTH_HEADER_VALUE:-}"
+  "NOTIFICATION_WEBHOOK_CONNECT_TIMEOUT_MS=${NOTIFICATION_WEBHOOK_CONNECT_TIMEOUT_MS:-2000}"
+  "NOTIFICATION_WEBHOOK_READ_TIMEOUT_MS=${NOTIFICATION_WEBHOOK_READ_TIMEOUT_MS:-5000}"
 )
 
 # Start real backend services for current implementation phase.
@@ -195,6 +209,12 @@ start_or_reuse_service "auth-service" "${AUTH_SERVICE_PORT:-8081}" \
 start_or_reuse_service "knowledge-base-service" "${KNOWLEDGE_BASE_SERVICE_PORT:-8083}" \
   "http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}/actuator/health" \
   env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:knowledge-base-service:bootRun
+start_or_reuse_service "ticket-service" "${TICKET_SERVICE_PORT:-8085}" \
+  "http://localhost:${TICKET_SERVICE_PORT:-8085}/actuator/health" \
+  env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:ticket-service:bootRun
+start_or_reuse_service "notification-service" "${NOTIFICATION_SERVICE_PORT:-8086}" \
+  "http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}/actuator/health" \
+  env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:notification-service:bootRun
 start_or_reuse_service "ai-orchestrator-service" "${AI_ORCHESTRATOR_SERVICE_PORT:-8084}" \
   "http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}/actuator/health" \
   env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:ai-orchestrator-service:bootRun
@@ -223,6 +243,8 @@ fi
 wait_http_ok "http://localhost:${TENANT_SERVICE_PORT:-8082}/actuator/health" "tenant-service"
 wait_http_ok "http://localhost:${AUTH_SERVICE_PORT:-8081}/actuator/health" "auth-service"
 wait_http_ok "http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}/actuator/health" "knowledge-base-service"
+wait_http_ok "http://localhost:${TICKET_SERVICE_PORT:-8085}/actuator/health" "ticket-service"
+wait_http_ok "http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}/actuator/health" "notification-service"
 wait_http_ok "http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}/actuator/health" "ai-orchestrator-service"
 wait_http_ok "http://localhost:${API_GATEWAY_PORT:-8080}/actuator/health" "api-gateway"
 
@@ -237,6 +259,8 @@ echo "  auth:        http://localhost:${AUTH_SERVICE_PORT:-8081}"
 echo "  tenant:      http://localhost:${TENANT_SERVICE_PORT:-8082}"
 echo "  knowledge:   http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}"
 echo "  ai-chat:     http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}"
+echo "  tickets:     http://localhost:${TICKET_SERVICE_PORT:-8085}"
+echo "  notify:      http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}"
 echo
 echo "[info] Press Ctrl+C to stop local app processes started by this script."
 echo "[info] Docker containers remain running."

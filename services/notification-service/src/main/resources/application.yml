@@ -1,6 +1,11 @@
 spring:
   application:
     name: notification-service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 server:
   port: 8086
@@ -10,3 +15,19 @@ management:
     web:
       exposure:
         include: health,info
+
+notification:
+  messaging:
+    enabled: ${NOTIFICATION_MESSAGING_ENABLED:true}
+    exchange: ${NOTIFICATION_EXCHANGE:opspilot.events}
+    ticket-created-routing-key: ${TICKET_CREATED_ROUTING_KEY:ticket.created}
+    document-processed-routing-key: ${DOCUMENT_PROCESSED_ROUTING_KEY:document.processed}
+    ticket-created-queue: ${NOTIFICATION_TICKET_CREATED_QUEUE:notification.ticket.created}
+    document-processed-queue: ${NOTIFICATION_DOCUMENT_PROCESSED_QUEUE:notification.document.processed}
+  webhook:
+    enabled: ${NOTIFICATION_WEBHOOK_ENABLED:true}
+    url: ${NOTIFICATION_WEBHOOK_URL:http://localhost:8090/events}
+    auth-header-name: ${NOTIFICATION_WEBHOOK_AUTH_HEADER_NAME:}
+    auth-header-value: ${NOTIFICATION_WEBHOOK_AUTH_HEADER_VALUE:}
+    connect-timeout-ms: ${NOTIFICATION_WEBHOOK_CONNECT_TIMEOUT_MS:2000}
+    read-timeout-ms: ${NOTIFICATION_WEBHOOK_READ_TIMEOUT_MS:5000}

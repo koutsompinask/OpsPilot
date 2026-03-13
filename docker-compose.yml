@@ -36,6 +36,11 @@ services:
       timeout: 10s
       retries: 10
 
+  webhook-receiver:
+    image: ealen/echo-server:0.9.2
+    ports:
+      - "${WEBHOOK_RECEIVER_PORT:-8090}:80"
+
   minio:
     image: minio/minio:RELEASE.2025-01-20T14-49-07Z
     command: server /data --console-address ":9001"

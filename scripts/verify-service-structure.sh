@@ -9,6 +9,8 @@ SERVICES=(
   "tenant-service:com/opspilot/tenant"
   "knowledge-base-service:com/opspilot/knowledgebase"
   "ai-orchestrator-service:com/opspilot/aiorchestrator"
+  "ticket-service:com/opspilot/ticket"
+  "notification-service:com/opspilot/notification"
 )
 
 ALLOWED_TOP=(config controller service repository domain dto mapper exception security util)

@@ -1,6 +1,7 @@
 package com.opspilot.aiorchestrator.service;
 
 import com.opspilot.aiorchestrator.dto.ChatAskResponse;
+import com.opspilot.aiorchestrator.dto.InternalCreateTicketRequest;
 import com.opspilot.aiorchestrator.dto.ChatSourceResponse;
 import com.opspilot.aiorchestrator.exception.BadRequestException;
 import com.opspilot.aiorchestrator.repository.DocumentChunkSearchRepository;
@@ -9,6 +10,8 @@ import com.opspilot.aiorchestrator.security.CurrentUser;
 import com.opspilot.aiorchestrator.service.answering.AnswerGenerationResult;
 import com.opspilot.aiorchestrator.service.answering.AnswerService;
 import com.opspilot.aiorchestrator.service.embedding.EmbeddingService;
+import com.opspilot.aiorchestrator.service.integration.TicketClient;
+import com.opspilot.aiorchestrator.util.logging.RequestCorrelation;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +26,7 @@ public class ChatService {
     private final DocumentChunkSearchRepository searchRepository;
     private final EmbeddingService embeddingService;
     private final AnswerService answerService;
+    private final TicketClient ticketClient;
     private final int defaultTopK;
     private final double lowConfidenceThreshold;
 
@@ -30,12 +34,14 @@ public class ChatService {
             DocumentChunkSearchRepository searchRepository,
             EmbeddingService embeddingService,
             AnswerService answerService,
+            TicketClient ticketClient,
             @Value("${ai.chat.default-top-k:4}") int defaultTopK,
             @Value("${ai.chat.low-confidence-threshold:0.55}") double lowConfidenceThreshold
     ) {
         this.searchRepository = searchRepository;
         this.embeddingService = embeddingService;
         this.answerService = answerService;
+        this.ticketClient = ticketClient;
         this.defaultTopK = defaultTopK;
         this.lowConfidenceThreshold = lowConfidenceThreshold;
     }
@@ -58,10 +64,15 @@ public class ChatService {
 
         double confidence = computeConfidence(chunks);
         boolean lowConfidence = confidence < lowConfidenceThreshold;
+        boolean ticketCreated = false;
 
         List<ChatSourceResponse> sources = chunks.stream()
                 .map(chunk -> new ChatSourceResponse(chunk.documentName(), "chunk-" + chunk.chunkIndex()))
                 .toList();
+
+        if (lowConfidence) {
+            ticketCreated = createSupportTicket(user, normalizedQuestion, answer.answer(), confidence, sources.size());
+        }
 
         log.info(
                 "ai_chat_response_ready tenantId={} userId={} chunkCount={} confidence={} lowConfidence={} answerProvider={} ticketCreated={}",
@@ -71,10 +82,10 @@ public class ChatService {
                 confidence,
                 lowConfidence,
                 answer.provider(),
-                false
+                ticketCreated
         );
 
-        return new ChatAskResponse(answer.answer(), confidence, sources, false);
+        return new ChatAskResponse(answer.answer(), confidence, sources, ticketCreated);
     }
 
     private int normalizeTopK(Integer requestedTopK) {
@@ -99,5 +110,39 @@ public class ChatService {
         }
         double avg = total / sampleSize;
         return Math.round(avg * 1000.0) / 1000.0;
+    }
+
+    private boolean createSupportTicket(
+            CurrentUser user,
+            String question,
+            String answer,
+            double confidence,
+            int sourceCount
+    ) {
+        try {
+            ticketClient.createTicket(new InternalCreateTicketRequest(
+                    user.tenantId(),
+                    user.userId(),
+                    user.email(),
+                    question,
+                    answer,
+                    confidence,
+                    sourceCount,
+                    "Auto-created from low-confidence chat response"
+            ));
+            return true;
+        } catch (Exception ex) {
+            log.error(
+                    "ai_chat_ticket_create_failed tenantId={} userId={} confidence={} sourceCount={} requestId={} reason={}",
+                    user.tenantId(),
+                    user.userId(),
+                    confidence,
+                    sourceCount,
+                    RequestCorrelation.currentRequestId(),
+                    ex.getMessage(),
+                    ex
+            );
+            return false;
+        }
     }
 }

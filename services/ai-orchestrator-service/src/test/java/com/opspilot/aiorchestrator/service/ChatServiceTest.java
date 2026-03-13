@@ -17,6 +17,7 @@ import com.opspilot.aiorchestrator.service.answering.AnswerGenerationResult;
 import com.opspilot.aiorchestrator.service.answering.AnswerService;
 import com.opspilot.aiorchestrator.service.embedding.EmbeddingProvider;
 import com.opspilot.aiorchestrator.service.embedding.EmbeddingService;
+import com.opspilot.aiorchestrator.service.integration.TicketClient;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,12 +42,15 @@ class ChatServiceTest {
     @Mock
     private AnswerService answerService;
 
+    @Mock
+    private TicketClient ticketClient;
+
     private ChatService chatService;
     private CurrentUser user;
 
     @BeforeEach
     void setUp() {
-        chatService = new ChatService(repository, embeddingService, answerService, 4, 0.55);
+        chatService = new ChatService(repository, embeddingService, answerService, ticketClient, 4, 0.55);
         user = new CurrentUser(UUID.randomUUID(), UUID.randomUUID(), "user@example.com", Role.TENANT_MEMBER);
 
         lenient().when(embeddingService.provider()).thenReturn(embeddingProvider);
@@ -80,6 +84,18 @@ class ChatServiceTest {
 
         assertEquals(0.0, response.confidence());
         assertEquals(0, response.sources().size());
+        org.junit.jupiter.api.Assertions.assertTrue(response.ticketCreated());
+    }
+
+    @Test
+    void askShouldKeepResponseWhenTicketCreateFails() {
+        when(repository.searchTopChunks(eq(user.tenantId()), any(), eq(4))).thenReturn(List.of());
+        when(answerService.generate(any(), eq(List.of()))).thenReturn(new AnswerGenerationResult("No context", "local"));
+        org.mockito.Mockito.doThrow(new IllegalStateException("boom")).when(ticketClient).createTicket(any());
+
+        ChatAskResponse response = chatService.ask(user, "Unknown", null);
+
+        assertEquals("No context", response.answer());
         assertFalse(response.ticketCreated());
     }
 

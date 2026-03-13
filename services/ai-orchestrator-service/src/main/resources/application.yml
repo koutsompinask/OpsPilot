@@ -35,3 +35,7 @@ ai:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
       url: ${OPENAI_CHAT_URL:https://api.openai.com/v1/chat/completions}
+
+ticket-service:
+  base-url: ${TICKET_SERVICE_BASE_URL:http://localhost:8085}
+  service-token: ${INTERNAL_SERVICE_TOKEN:opspilot-internal-dev-token}

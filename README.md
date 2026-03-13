@@ -1,6 +1,6 @@
-# OpsPilot Monorepo (Phase 4)
+# OpsPilot Monorepo (Phase 5 Backend)
 
-Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 4 implementation:
+Current state provides the baseline monorepo scaffold plus implemented backend flows through Phase 5:
 - Gradle multi-project Spring Boot service skeletons
 - React + Vite + TypeScript + Tailwind frontend app with complete minimal Phase 2 flow
 - Local infrastructure with Docker Compose
@@ -10,6 +10,8 @@ Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 4 imp
 - API gateway auth routing and JWT enforcement for protected paths
 - Knowledge document ingestion in `knowledge-base-service` (`POST/GET/DELETE /documents` with async processing status)
 - AI chat orchestration in `ai-orchestrator-service` (`POST /chat/ask` with vector retrieval, confidence, and citations)
+- Support workflow in `ticket-service` (`GET/POST/PATCH /tickets`, internal low-confidence ticket creation, `ticket.created` event publishing)
+- Generic webhook notification delivery in `notification-service` for `ticket.created` and `document.processed`
 
 ## Structure
 
@@ -25,7 +27,7 @@ Current state provides the baseline monorepo scaffold plus Phase 2 + Phase 4 imp
    - `cp .env.example .env`
 2. Start current local stack (recommended):
    - `./scripts/start-local.sh .env`
-   - This loads env vars, starts required Docker infra/stubs, starts real Phase 3 backend services (`api-gateway`, `auth-service`, `tenant-service`, `knowledge-base-service`), and starts frontend dev server.
+   - This loads env vars, starts required Docker infra/stubs, starts real implemented backend services (`api-gateway`, `auth-service`, `tenant-service`, `knowledge-base-service`, `ai-orchestrator-service`, `ticket-service`, `notification-service`), starts the local webhook receiver, and starts the frontend dev server.
 3. Manual compose options (infra/stubs only):
    - `docker compose --env-file .env.example up -d`
    - `docker compose --env-file .env.example --profile apps up -d`
@@ -61,6 +63,8 @@ Phase 2 UI routes:
 ## Notes
 
 - Most services are still skeleton-only; `auth-service`, `tenant-service`, `knowledge-base-service`, `ai-orchestrator-service`, and `api-gateway` now include implemented behavior.
+- `ticket-service` and `notification-service` are now implemented for the Phase 5 backend support workflow.
+- Frontend `/tickets` remains intentionally placeholder in this phase; backend support workflow is complete before dashboard UI work.
 - Business endpoints and cross-service workflows are added in later phases.
 - Health endpoint baseline: `/actuator/health`.
 - If UI requests fail with `ERR_CONNECTION_REFUSED`, start the local stack first (`./scripts/start-local.sh .env`).
