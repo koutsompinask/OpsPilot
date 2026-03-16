@@ -1,701 +1,354 @@
-# OpsPilot – Implementation Plan (LLM-Friendly)
+# OpsPilot Implementation Plan
 
-## Project Overview
+Last updated: 2026-03-16
+Status: backend phases 1-5 are implemented; frontend core flows plus tickets workspace are implemented; analytics, production infra, CI/CD, and cloud deployment remain open.
 
-**OpsPilot** is a cloud-native AI support assistant platform designed for businesses (e.g., hotels, Airbnb hosts, small companies). It allows administrators to upload knowledge documents and provides an AI-powered assistant that answers user questions using Retrieval-Augmented Generation (RAG). When the AI cannot answer confidently, it creates a support ticket for human staff.
+## Project Intent
 
-The project is designed to demonstrate modern software engineering practices including:
+OpsPilot is a multi-tenant AI support assistant platform for small and mid-sized businesses. Tenant admins can upload knowledge documents, tenant users can ask grounded questions in chat, and low-confidence answers can escalate into support tickets for human follow-up.
 
-* Spring Boot microservices
-* React frontend
-* Retrieval-Augmented Generation (RAG)
-* Docker containerization
-* Kubernetes orchestration
-* CI/CD with Jenkins
-* Cloud deployment on AWS
-* Observability with Prometheus and Grafana
-* Event-driven architecture
+This repository is no longer in greenfield planning mode. The plan below reflects the codebase and commit history through:
+- `refactor(backend): consolidate rag services into assistant-service` on 2026-03-16
+- the Phase 5 backend support workflow delivered on 2026-03-13
+- the Phase 6A tickets workspace delivered on 2026-03-13
+- the follow-up assistant-service review fixes completed on 2026-03-16
 
-The repository should be structured to look like a **production SaaS system**.
+## Current Repository Shape
 
----
+Top-level structure:
 
-# 1. Repository Structure
-
-Create a **monorepo** with the following structure:
-
-```
+```text
 opspilot/
-│
 ├─ frontend/
-│
 ├─ services/
-│   ├─ api-gateway/
-│   ├─ auth-service/
-│   ├─ tenant-service/
-│   ├─ knowledge-base-service/
-│   ├─ ai-orchestrator-service/
-│   ├─ ticket-service/
-│   ├─ notification-service/
-│   └─ analytics-service/
-│
+│  ├─ analytics-service/
+│  ├─ api-gateway/
+│  ├─ assistant-service/
+│  ├─ auth-service/
+│  ├─ notification-service/
+│  ├─ tenant-service/
+│  └─ ticket-service/
 ├─ infra/
-│   ├─ docker/
-│   ├─ k8s/
-│   ├─ helm/
-│   ├─ jenkins/
-│   └─ terraform/
-│
+│  ├─ docker/
+│  ├─ helm/
+│  ├─ jenkins/
+│  ├─ k8s/
+│  └─ terraform/
 ├─ docs/
-│   ├─ architecture/
-│   ├─ api/
-│   └─ diagrams/
-│
 ├─ scripts/
-│
 ├─ docker-compose.yml
-└─ README.md
+├─ plan.md
+└─ tasks.md
 ```
 
-Guidelines:
+Notes:
+- `knowledge-base-service` and `ai-orchestrator-service` were intentionally consolidated into `assistant-service`.
+- `analytics-service` still exists as a scaffold only.
+- `infra/*` directories are still mostly placeholders for later phases.
 
-* Each service is an independent Spring Boot project.
-* Services communicate through REST and messaging.
-* Infrastructure configs live under `/infra`.
+Backend package convention for implemented services remains mandatory:
+- use `config`, `controller`, `service`, `repository`, `domain`, `dto`, `mapper`, `exception`, `security`, `util`
+- place entities under `domain/entity`
+- nest subcategories under their parent layer
+- validate with `bash scripts/verify-service-structure.sh`
 
-Backend package convention (implemented services):
+## Current Architecture
 
-* Under `com.opspilot.<service>`, use top-level folders: `config`, `controller`, `service`, `repository`, `domain`, `dto`, `mapper`, `exception`, `security`, `util`.
-* Create only relevant folders for real code; avoid placeholder files used only for structure.
-* Keep entities under `domain/entity`.
-* Keep subcategories nested under their parent layer (examples: `service/storage`, `service/integration`, `util/logging`).
-* Do not use legacy ad-hoc top-level folders such as `entity`, `client`, `logging`, `chunking`, `embedding`, `messaging`, `storage`.
-
----
-
-# 2. Core Architecture
-
-## Frontend
+### Frontend
 
 Technology:
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
 
-* React
-* TypeScript
-* Vite
-* TailwindCSS
+Implemented routes:
+- `/register`
+- `/login`
+- `/dashboard`
+- `/tenant-users`
+- `/tenant-settings`
+- `/documents`
+- `/chat`
+- `/tickets`
 
-Responsibilities:
+Current frontend status:
+- auth, tenant management, document management, chat, and tickets are live
+- `/analytics` is intentionally placeholder
+- Phase 6 visual redesign and motion polish are in place
 
-* Admin dashboard
-* Chat interface
-* Document upload
-* Ticket management
-* Analytics visualization
+### Backend Services
 
----
-
-## Backend Microservices
-
-### API Gateway
-
-Purpose:
-
-* Single entry point to backend
-* Request routing
-* Authentication forwarding
-* Rate limiting
-
-Technology:
-
-* Spring Cloud Gateway
-
----
-
-### Auth Service
+#### API Gateway
 
 Purpose:
+- single ingress for frontend traffic
+- route forwarding to implemented backend services
+- auth forwarding and protected-route enforcement
+- request correlation propagation
 
-* User authentication
-* JWT token generation
-* Role-based access
+Implemented route groups:
+- `/auth/**`
+- `/tenants/**`
+- `/users/**`
+- `/documents/**`
+- `/chat/**`
+- `/tickets/**`
 
-Endpoints:
+#### Auth Service
 
-```
+Purpose:
+- tenant bootstrap registration
+- login and refresh token flow
+- JWT issuance
+
+Implemented endpoints:
+
+```text
 POST /auth/register
 POST /auth/login
 POST /auth/refresh
 ```
 
-Entities:
-
-* User
-* Role
-* Tenant reference
-
----
-
-### Tenant Service
+#### Tenant Service
 
 Purpose:
+- tenant profile lookup/update
+- tenant-scoped user management
 
-* Manage organizations (tenants)
-* Manage users within tenant
+Implemented endpoints:
 
-Endpoints:
-
-```
+```text
 GET /tenants/me
 PUT /tenants/me
 GET /users
 POST /users
 ```
 
-Entities:
-
-* Tenant
-* UserProfile
-
----
-
-### Knowledge Base Service
+#### Assistant Service
 
 Purpose:
+- document ingestion
+- text chunking and embedding generation
+- document metadata and chunk persistence
+- vector search
+- grounded answer generation
+- low-confidence ticket escalation
 
-* Handle document ingestion
-* Store document metadata
-* Create embeddings
+Implemented endpoints:
 
-Responsibilities:
-
-* File upload
-* Text extraction
-* Chunking
-* Embedding creation
-* Vector storage
-
-Endpoints:
-
-```
+```text
 POST /documents
 GET /documents
 GET /documents/{id}
 DELETE /documents/{id}
-```
-
-Storage:
-
-* Document metadata → PostgreSQL
-* Raw files → S3/MinIO
-* Embeddings → PostgreSQL pgvector
-
----
-
-### AI Orchestrator Service
-
-Purpose:
-
-* Execute RAG workflow
-* Process user questions
-* Query vector database
-* Call LLM
-* Return grounded answers
-
-Workflow:
-
-1. Receive user question
-2. Generate embedding
-3. Retrieve top-k document chunks
-4. Construct prompt
-5. Send prompt to LLM
-6. Evaluate confidence
-7. Return answer and sources
-8. Create ticket if confidence low
-
-Endpoint:
-
-```
 POST /chat/ask
 ```
 
-Response Example:
+Key implementation notes:
+- owns the former knowledge and chat workflows behind one runtime
+- uses PostgreSQL plus pgvector and MinIO-backed document storage
+- publishes `document.processed`
+- calls `ticket-service` internally when low confidence requires escalation
 
-```
-{
-  "answer": "...",
-  "confidence": 0.82,
-  "sources": [
-    {
-      "document": "hotel-policy.pdf",
-      "chunkId": "chunk-14"
-    }
-  ],
-  "ticketCreated": false
-}
-```
-
----
-
-### Ticket Service
+#### Ticket Service
 
 Purpose:
+- ticket persistence and support workflow
+- tenant-scoped queue visibility
+- admin-only status transitions
+- `ticket.created` event publishing
 
-* Manage unresolved AI questions
-* Human support workflow
+Implemented endpoints:
 
-Endpoints:
-
-```
+```text
 GET /tickets
 POST /tickets
 PATCH /tickets/{id}/status
+POST /internal/tickets
 ```
 
-Entities:
-
-* Ticket
-* TicketStatus
-* ChatReference
-
----
-
-### Notification Service
+#### Notification Service
 
 Purpose:
+- consume support and document events
+- forward best-effort webhook notifications
+- log delivery outcomes with correlation context
 
-* Send notifications when events occur
+Current event coverage:
+- `ticket.created`
+- `document.processed`
 
-Consumes events:
-
-* TicketCreated
-* DocumentProcessed
-
-Possible channels:
-
-* email
-* webhook
-* log output (for MVP)
-
-Uses message queue.
-
----
-
-### Analytics Service
+#### Analytics Service
 
 Purpose:
+- reserved for future analytics dashboards and event aggregation
+
+Status:
+- scaffold only; no business endpoints implemented yet
+
+## Data and Integration Model
+
+Current persistence and infrastructure choices:
+- PostgreSQL for relational data
+- pgvector for document embeddings
+- MinIO for document object storage
+- RabbitMQ for asynchronous events
+- local webhook receiver for notification smoke testing
+
+Current core domains:
+- tenants and users
+- documents and document chunks
+- chat answer requests and citations
+- support tickets
 
-* Track system usage
+Important architecture decision:
+- the RAG domain is now centered in `assistant-service`; do not reintroduce a separate knowledge/chat split unless a real runtime boundary appears again
 
-Tracks:
+## Logging and Correlation Baseline
 
-* chat queries
-* AI confidence
-* unresolved questions
-* document usage
+This remains a non-negotiable cross-cutting requirement:
+- structured JSON logs for implemented backend services
+- request lifecycle logs at API boundaries
+- business outcome logs for important domain actions
+- centralized exception logging with sensible severity
+- `X-Request-Id` generation and propagation across service boundaries
+- no logging of passwords, tokens, raw JWTs, or sensitive payload bodies
 
-Endpoints:
+## Verified Delivery Ledger
 
-```
-GET /analytics/dashboard
-```
+### Implemented and verified
 
----
+#### Phase 1
+- monorepo scaffold
+- service skeletons
+- frontend shell
+- Docker Compose baseline
 
-# 3. Database Design
+#### Phase 2
+- auth flow
+- tenant management
+- user management
+- gateway protection and CORS handling
+- frontend register, login, dashboard, tenant users, tenant settings
 
-Use **PostgreSQL** with **pgvector extension**.
+#### Phase 3
+- document upload and listing
+- async ingestion flow
+- chunking and embedding
+- pgvector persistence
+- document delete and detail flow
 
-Core tables:
+#### Phase 4
+- authenticated chat ask flow
+- vector retrieval and grounded answers
+- confidence score and source citations
+- gateway `/chat/**` routing
 
-```
-tenants
-users
-documents
-document_chunks
-chat_sessions
-chat_messages
-tickets
-analytics_events
-```
+Verification reference:
+- `docs/api/phase-4-flow-ledger.md`
 
-Vector storage:
+#### Phase 5
+- low-confidence auto-ticket creation
+- `ticket-service` APIs and persistence
+- `notification-service` event consumption and webhook delivery
+- gateway and startup wiring for the support workflow
 
-```
-document_chunks
-- id
-- document_id
-- chunk_text
-- embedding (vector)
-```
+Verification reference:
+- `docs/api/phase-5-flow-ledger.md`
 
-Multi-tenancy rule:
+#### Phase 6 completed subset
+- frontend redesign system and route refresh
+- live `/tickets` workspace with list, detail, filters, and admin status controls
 
-All records must include:
+### Post-phase hardening already completed
 
-```
-tenant_id
-```
+Recent follow-up work from commit history:
+- consolidated `knowledge-base-service` and `ai-orchestrator-service` into `assistant-service`
+- documented the new service boundary in `docs/architecture/service-boundary-review.md`
+- fixed accidental schema rename regression by restoring the persistence schema to `assistant`
+- moved object storage bucket initialization to explicit startup
+- removed duplicated pgvector serialization logic
+- batched document chunk inserts
+- expanded assistant-service workflow test coverage
 
----
+## Remaining Work
 
-# 4. RAG Pipeline
+### Priority 1: close the frontend and product gap
 
-The AI system should implement Retrieval-Augmented Generation.
+1. Implement `/analytics` instead of leaving it as a placeholder.
+2. Decide whether Phase 6 needs any additional post-redesign polish beyond the current tickets workspace.
+3. Keep frontend docs and route inventory aligned with live behavior.
 
-Steps:
+### Priority 2: harden the merged assistant runtime
 
-1. Document upload
-2. Extract text
-3. Split text into chunks
-4. Generate embeddings
-5. Store embeddings
-6. Query embeddings during chat
-7. Retrieve top K chunks
-8. Inject chunks into prompt
-9. Generate answer
-10. Return citations
+1. Continue reviewing `assistant-service` for clean boundaries after the merge.
+2. Watch for new duplication that would justify a shared library, but only after repeated concrete evidence.
+3. Preserve startup reliability and migration compatibility when renaming packages or services.
 
-Embedding options:
+### Priority 3: observability and analytics
 
-Preferred:
+1. Define the analytics event model and dashboard scope.
+2. Implement real `analytics-service` endpoints and data capture.
+3. Add Prometheus and Grafana assets under `infra/` when the metrics contract is ready.
 
-* OpenAI embeddings (development)
+### Priority 4: delivery infrastructure
 
-Optional later:
+1. Replace placeholder infra docs with deployable Kubernetes manifests or Helm charts.
+2. Add Jenkins pipeline assets for build, test, image build, and smoke verification.
+3. Document image strategy and deployment flow.
 
-* AWS Bedrock embeddings
+### Priority 5: cloud deployment
 
----
+1. Define AWS target architecture for EKS, RDS, object storage, and ingress.
+2. Add Terraform and environment overlays only after local and container deployment assets are settled.
 
-# 5. Messaging Architecture
+## Next Recommended Execution Order
 
-Use **RabbitMQ** for asynchronous communication.
+1. Finish the analytics slice end to end:
+   implement backend event capture, analytics API, and the `/analytics` frontend page together.
+2. Convert infrastructure placeholders into a minimal real deployment baseline:
+   container/image documentation, Kubernetes manifests or Helm, then Jenkins pipeline.
+3. Add cloud deployment assets after local and cluster deployment paths are reproducible.
 
-Example events:
+## Verification Expectations For Future Tasks
 
-```
-DocumentProcessed
-TicketCreated
-ChatCompleted
-NotificationRequested
-```
+Every non-trivial task should include:
+- relevant Gradle test targets for changed services
+- `cd frontend && npm run build` for frontend changes
+- `bash scripts/verify-service-structure.sh` when package layout changes
+- `bash -n scripts/start-local.sh` plus a practical smoke run when startup behavior changes
+- updates to `tasks.md` with concrete verification evidence before handoff
 
-Services publish and consume events.
+## Lessons Incorporated Into This Plan
 
-Example flow:
+From `tasks/lessons.md`, the plan now explicitly guards against:
+- shipping backend phases without the matching minimal frontend route when full flow delivery is expected
+- missing gateway CORS preflight coverage on protected routes
+- unstable animation callbacks that retrigger on rerender
+- broad rename operations that unintentionally alter persisted schema or Flyway-managed artifacts
+- startup readiness windows that are too short for concurrent local boot flows
 
-User Question → AI Confidence Low → TicketCreated Event → Notification Service → Notify staff
+## Definition Of Current MVP
 
----
-
-# 6. Frontend Features
-
-Pages required:
-
-Login Page
-
-Admin Dashboard
-
-Document Upload Page
-
-Chat Interface
-
-Ticket Management Page
-
-Analytics Page
-
-Tenant Settings Page
-
----
-
-## Chat UI
-
-Features:
-
-* message history
-* streaming answer
-* display document sources
-* show fallback when AI unsure
-
----
-
-# 7. Local Development Environment
-
-Use **Docker Compose**.
-
-Services included:
-
-* PostgreSQL
-* Redis
-* RabbitMQ
-* MinIO
-* All backend services
-* Frontend
-
-Command:
-
-```
-docker compose up
-```
-
-The entire system should run locally.
-
----
-
-# 8. Containerization
-
-Each service requires:
-
-Dockerfile
-
-Best practices:
-
-* multi-stage build
-* small runtime images
-* environment variable configuration
-
-Example:
-
-```
-FROM eclipse-temurin:21-jdk
-COPY target/app.jar app.jar
-ENTRYPOINT ["java","-jar","/app.jar"]
-```
-
----
-
-# 9. Kubernetes Deployment
-
-Deploy services to Kubernetes.
-
-Resources required:
-
-* Deployments
-* Services
-* Ingress
-* ConfigMaps
-* Secrets
-* Horizontal Pod Autoscaler
-
-Services deployed:
-
-```
-frontend
-api-gateway
-auth-service
-tenant-service
-knowledge-base-service
-ai-orchestrator-service
-ticket-service
-notification-service
-analytics-service
-```
-
----
-
-# 10. CI/CD Pipeline
-
-Use **Jenkins**.
-
-Pipeline stages:
-
-1. checkout code
-2. run backend tests
-3. run frontend build
-4. build JAR files
-5. build Docker images
-6. push images to registry
-7. deploy to Kubernetes
-8. smoke tests
-
-Jenkinsfile must exist in repository.
-
----
-
-# 11. AWS Deployment
-
-Target AWS services:
-
-```
-EKS → Kubernetes cluster
-ECR → Docker registry
-RDS → PostgreSQL
-ElastiCache → Redis
-S3 → document storage
-CloudWatch → logs
-ALB → ingress
-```
-
-Goal:
-
-Production-like cloud deployment.
-
----
-
-# 12. Observability
-
-Use:
-
-* Prometheus
-* Grafana
-* Spring Boot Actuator
-
-Metrics:
-
-* request latency
-* error rates
-* chat usage
-* AI confidence
-* ticket creation rate
-
-Logs should include correlation IDs.
-
-Logging baseline for all phases:
-
-* structured JSON logs for backend services
-* request lifecycle logs at API boundaries (method/path/status/duration)
-* business outcome logs for major domain actions (success/failure)
-* centralized exception logging with clear severity (`WARN` for expected 4xx, `ERROR` for unexpected failures)
-* correlation via `X-Request-Id` generated at ingress and propagated across internal service calls
-* no logging of secrets (passwords, tokens, raw JWTs, sensitive payload bodies)
-
----
-
-# 13. Development Phases
-
-## Phase 1
-
-Project setup
-
-* repository structure
-* docker compose
-* service skeletons
-
----
-
-## Phase 2
-
-Authentication system
-
-* JWT auth
-* tenant creation
-* user management
-
----
-
-## Phase 3
-
-Knowledge ingestion
-
-* upload documents
-* extract text
-* chunking
-* embeddings
-* pgvector storage
-
----
-
-## Phase 4
-
-AI chat
-
-* RAG pipeline
-* vector search
-* LLM integration
-* source citations
-
----
-
-## Phase 5
-
-Support workflow
-
-* ticket creation
-* RabbitMQ events
-* notification system
-
----
-
-## Phase 6
-
-Frontend UI
-
-* login
-* document upload
-* chat interface
-* tickets dashboard
-* analytics dashboard
-
----
-
-## Phase 7
-
-Dockerization
-
-* containerize services
-* docker compose orchestration
-
----
-
-## Phase 8
-
-Kubernetes
-
-* deploy microservices
-* configure ingress
-* add autoscaling
-
----
-
-## Phase 9
-
-CI/CD
-
-* Jenkins pipeline
-* automated builds
-* Kubernetes deployment
-
----
-
-## Phase 10
-
-Cloud deployment
-
-* AWS infrastructure
-* EKS cluster
-* RDS database
-* S3 storage
-
----
-
-# 14. MVP Definition
-
-The minimum viable system must support:
-
+The repository currently satisfies the original MVP:
 1. tenant registration
 2. admin login
 3. document upload
-4. document embedding
-5. AI chat answering questions
-6. answer citations
-7. ticket creation when confidence low
+4. document embedding and retrieval
+5. AI chat answers with citations
+6. low-confidence ticket creation
+7. staff visibility and status updates in the ticket dashboard
 
-Everything else is an enhancement.
+What is still beyond the MVP:
+- analytics implementation
+- production-grade infra and CI/CD
+- AWS deployment assets
 
----
+## Success Criteria For The Next Phase
 
-# 15. Success Criteria
-
-The system is complete when the following demo works:
-
-1. Admin registers tenant
-2. Admin uploads policy document
-3. User asks a question in chat
-4. AI answers using document context
-5. AI provides citation
-6. Unsupported question creates ticket
-7. Staff sees ticket in dashboard
-
----
-
-# End of Plan
+The next meaningful milestone is complete when:
+1. `/analytics` is implemented end to end
+2. analytics data is captured from live workflows instead of placeholder content
+3. local verification includes analytics behavior alongside existing chat and ticket flows
+4. planning docs, startup scripts, and infra assets remain aligned with the actual repo state

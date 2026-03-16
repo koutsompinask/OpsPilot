@@ -6,6 +6,8 @@
 - [ ] No active implementation task in progress
 
 ## Done
+- [x] Refreshed `plan.md` to match current repo reality, commit history, `tasks.md`, and `tasks/lessons.md`
+- [x] Verified plan refresh by checking `git log --oneline --decorate -n 25`, `README.md`, `docs/api/phase-4-flow-ledger.md`, `docs/api/phase-5-flow-ledger.md`, and `docs/architecture/service-boundary-review.md` on 2026-03-16
 - [x] Fixed review item: renamed assistant-service persistence schema from `knowledge` to `assistant`
 - [x] Verified schema rename with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
 - [x] Fixed review item: moved assistant-service storage bucket initialization from `DocumentStorageService` constructor to explicit startup initializer
