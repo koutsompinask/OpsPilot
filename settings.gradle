@@ -4,8 +4,7 @@ include(
     "services:api-gateway",
     "services:auth-service",
     "services:tenant-service",
-    "services:knowledge-base-service",
-    "services:ai-orchestrator-service",
+    "services:assistant-service",
     "services:ticket-service",
     "services:notification-service",
     "services:analytics-service"

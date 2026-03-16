@@ -86,19 +86,12 @@ services:
     ports:
       - "${TENANT_SERVICE_PORT:-8082}:8082"
 
-  knowledge-base-service:
+  assistant-service:
     image: alpine:3.20
     profiles: ["apps"]
     command: ["sh", "-c", "while true; do sleep 3600; done"]
     ports:
-      - "${KNOWLEDGE_BASE_SERVICE_PORT:-8083}:8083"
-
-  ai-orchestrator-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
-    ports:
-      - "${AI_ORCHESTRATOR_SERVICE_PORT:-8084}:8084"
+      - "${ASSISTANT_SERVICE_PORT:-8083}:8083"
 
   ticket-service:
     image: alpine:3.20

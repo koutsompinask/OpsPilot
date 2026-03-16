@@ -8,8 +8,7 @@ Current state provides the baseline monorepo scaffold plus implemented backend f
 - JWT authentication with register/login/refresh in `auth-service`
 - Tenant and user management APIs in `tenant-service`
 - API gateway auth routing and JWT enforcement for protected paths
-- Knowledge document ingestion in `knowledge-base-service` (`POST/GET/DELETE /documents` with async processing status)
-- AI chat orchestration in `ai-orchestrator-service` (`POST /chat/ask` with vector retrieval, confidence, and citations)
+- RAG document ingestion and chat workflows in `assistant-service` (`POST/GET/DELETE /documents`, `POST /chat/ask`, async ingestion, retrieval, confidence, and citations)
 - Support workflow in `ticket-service` (`GET/POST/PATCH /tickets`, internal low-confidence ticket creation, `ticket.created` event publishing)
 - Generic webhook notification delivery in `notification-service` for `ticket.created` and `document.processed`
 
@@ -27,7 +26,7 @@ Current state provides the baseline monorepo scaffold plus implemented backend f
    - `cp .env.example .env`
 2. Start current local stack (recommended):
    - `./scripts/start-local.sh .env`
-   - This loads env vars, starts required Docker infra/stubs, starts real implemented backend services (`api-gateway`, `auth-service`, `tenant-service`, `knowledge-base-service`, `ai-orchestrator-service`, `ticket-service`, `notification-service`), starts the local webhook receiver, and starts the frontend dev server.
+   - This loads env vars, starts required Docker infra/stubs, starts real implemented backend services (`api-gateway`, `auth-service`, `tenant-service`, `assistant-service`, `ticket-service`, `notification-service`), starts the local webhook receiver, and starts the frontend dev server.
 3. Manual compose options (infra/stubs only):
    - `docker compose --env-file .env.example up -d`
    - `docker compose --env-file .env.example --profile apps up -d`
@@ -62,7 +61,7 @@ Phase 2 UI routes:
 
 ## Notes
 
-- Most services are still skeleton-only; `auth-service`, `tenant-service`, `knowledge-base-service`, `ai-orchestrator-service`, and `api-gateway` now include implemented behavior.
+- Most services are still skeleton-only; `auth-service`, `tenant-service`, `assistant-service`, and `api-gateway` now include implemented behavior.
 - `ticket-service` and `notification-service` are now implemented for the Phase 5 backend support workflow.
 - Frontend `/tickets` now exposes the support queue workspace for tenant users, with admin-only status management and answer-context review.
 - Frontend `/analytics` remains intentionally placeholder pending a dedicated implementation phase.

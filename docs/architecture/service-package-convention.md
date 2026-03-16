@@ -5,7 +5,7 @@ This convention applies to implemented backend services:
 - `api-gateway`
 - `auth-service`
 - `tenant-service`
-- `knowledge-base-service`
+- `assistant-service`
 
 ## Allowed Top-Level Packages
 

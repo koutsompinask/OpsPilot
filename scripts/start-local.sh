@@ -88,7 +88,7 @@ start_bg() {
 wait_http_ok() {
   local url="$1"
   local name="$2"
-  local max_attempts="${3:-60}"
+  local max_attempts="${3:-120}"
 
   local attempt=1
   while (( attempt <= max_attempts )); do
@@ -140,10 +140,10 @@ echo "[info] Starting required Docker services (infra + current backend stubs)..
 
 # Stop placeholder containers that would conflict with real app processes
 # (same ports as the Spring Boot and frontend dev servers).
-docker compose --env-file "$ENV_FILE" stop api-gateway auth-service tenant-service knowledge-base-service ai-orchestrator-service ticket-service notification-service frontend >/dev/null 2>&1 || true
+docker compose --env-file "$ENV_FILE" stop api-gateway auth-service tenant-service assistant-service ticket-service notification-service frontend >/dev/null 2>&1 || true
 
 # Start infra + still-stubbed backend services.
-# Real services (gateway/auth/tenant/knowledge-base/ai-orchestrator) are started below via Gradle.
+# Real services (gateway/auth/tenant/assistant/ticket/notification) are started below via Gradle.
 docker compose --env-file "$ENV_FILE" up -d \
   postgres redis rabbitmq minio webhook-receiver \
   analytics-service
@@ -154,8 +154,7 @@ COMMON_ENV=(
   "INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}"
   "AUTH_SERVICE_BASE_URL=${AUTH_SERVICE_BASE_URL:-http://localhost:${AUTH_SERVICE_PORT:-8081}}"
   "TENANT_SERVICE_BASE_URL=${TENANT_SERVICE_BASE_URL:-http://localhost:${TENANT_SERVICE_PORT:-8082}}"
-  "KNOWLEDGE_BASE_SERVICE_URL=${KNOWLEDGE_BASE_SERVICE_URL:-http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}}"
-  "AI_ORCHESTRATOR_SERVICE_URL=${AI_ORCHESTRATOR_SERVICE_URL:-http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}}"
+  "ASSISTANT_SERVICE_URL=${ASSISTANT_SERVICE_URL:-http://localhost:${ASSISTANT_SERVICE_PORT:-8083}}"
   "TICKET_SERVICE_BASE_URL=${TICKET_SERVICE_BASE_URL:-http://localhost:${TICKET_SERVICE_PORT:-8085}}"
   "POSTGRES_HOST=${POSTGRES_HOST:-localhost}"
   "POSTGRES_PORT=${POSTGRES_PORT:-5432}"
@@ -172,16 +171,15 @@ COMMON_ENV=(
   "S3_SECRET_KEY=${S3_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}"
   "S3_BUCKET=${S3_BUCKET:-knowledge-documents}"
   "S3_AUTO_CREATE_BUCKET=${S3_AUTO_CREATE_BUCKET:-true}"
-  "KNOWLEDGE_EMBEDDING_PROVIDER=${KNOWLEDGE_EMBEDDING_PROVIDER:-local}"
+  "ASSISTANT_EMBEDDING_PROVIDER=${ASSISTANT_EMBEDDING_PROVIDER:-local}"
   "OPENAI_API_KEY=${OPENAI_API_KEY:-}"
   "OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}"
   "OPENAI_EMBEDDING_URL=${OPENAI_EMBEDDING_URL:-https://api.openai.com/v1/embeddings}"
   "OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL:-gpt-4o-mini}"
   "OPENAI_CHAT_URL=${OPENAI_CHAT_URL:-https://api.openai.com/v1/chat/completions}"
-  "AI_EMBEDDING_PROVIDER=${AI_EMBEDDING_PROVIDER:-${KNOWLEDGE_EMBEDDING_PROVIDER:-local}}"
   "AI_CHAT_DEFAULT_TOP_K=${AI_CHAT_DEFAULT_TOP_K:-4}"
   "AI_CHAT_LOW_CONFIDENCE_THRESHOLD=${AI_CHAT_LOW_CONFIDENCE_THRESHOLD:-0.55}"
-  "KNOWLEDGE_MESSAGING_ENABLED=${KNOWLEDGE_MESSAGING_ENABLED:-true}"
+  "ASSISTANT_MESSAGING_ENABLED=${ASSISTANT_MESSAGING_ENABLED:-true}"
   "TICKET_MESSAGING_ENABLED=${TICKET_MESSAGING_ENABLED:-true}"
   "TICKET_CREATED_EXCHANGE=${TICKET_CREATED_EXCHANGE:-opspilot.events}"
   "TICKET_CREATED_ROUTING_KEY=${TICKET_CREATED_ROUTING_KEY:-ticket.created}"
@@ -206,18 +204,15 @@ start_or_reuse_service "tenant-service" "${TENANT_SERVICE_PORT:-8082}" \
 start_or_reuse_service "auth-service" "${AUTH_SERVICE_PORT:-8081}" \
   "http://localhost:${AUTH_SERVICE_PORT:-8081}/actuator/health" \
   env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:auth-service:bootRun
-start_or_reuse_service "knowledge-base-service" "${KNOWLEDGE_BASE_SERVICE_PORT:-8083}" \
-  "http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}/actuator/health" \
-  env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:knowledge-base-service:bootRun
+start_or_reuse_service "assistant-service" "${ASSISTANT_SERVICE_PORT:-8083}" \
+  "http://localhost:${ASSISTANT_SERVICE_PORT:-8083}/actuator/health" \
+  env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:bootRun
 start_or_reuse_service "ticket-service" "${TICKET_SERVICE_PORT:-8085}" \
   "http://localhost:${TICKET_SERVICE_PORT:-8085}/actuator/health" \
   env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:ticket-service:bootRun
 start_or_reuse_service "notification-service" "${NOTIFICATION_SERVICE_PORT:-8086}" \
   "http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}/actuator/health" \
   env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:notification-service:bootRun
-start_or_reuse_service "ai-orchestrator-service" "${AI_ORCHESTRATOR_SERVICE_PORT:-8084}" \
-  "http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}/actuator/health" \
-  env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:ai-orchestrator-service:bootRun
 start_or_reuse_service "api-gateway" "${API_GATEWAY_PORT:-8080}" \
   "http://localhost:${API_GATEWAY_PORT:-8080}/actuator/health" \
   env "${COMMON_ENV[@]}" ./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:bootRun
@@ -242,10 +237,9 @@ fi
 # Wait until services are actually reachable before announcing success.
 wait_http_ok "http://localhost:${TENANT_SERVICE_PORT:-8082}/actuator/health" "tenant-service"
 wait_http_ok "http://localhost:${AUTH_SERVICE_PORT:-8081}/actuator/health" "auth-service"
-wait_http_ok "http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}/actuator/health" "knowledge-base-service"
+wait_http_ok "http://localhost:${ASSISTANT_SERVICE_PORT:-8083}/actuator/health" "assistant-service"
 wait_http_ok "http://localhost:${TICKET_SERVICE_PORT:-8085}/actuator/health" "ticket-service"
 wait_http_ok "http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}/actuator/health" "notification-service"
-wait_http_ok "http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}/actuator/health" "ai-orchestrator-service"
 wait_http_ok "http://localhost:${API_GATEWAY_PORT:-8080}/actuator/health" "api-gateway"
 
 # Frontend readiness check (Vite index page).
@@ -257,8 +251,7 @@ echo "  frontend:    http://localhost:${FRONTEND_PORT:-5173}"
 echo "  api-gateway: http://localhost:${API_GATEWAY_PORT:-8080}"
 echo "  auth:        http://localhost:${AUTH_SERVICE_PORT:-8081}"
 echo "  tenant:      http://localhost:${TENANT_SERVICE_PORT:-8082}"
-echo "  knowledge:   http://localhost:${KNOWLEDGE_BASE_SERVICE_PORT:-8083}"
-echo "  ai-chat:     http://localhost:${AI_ORCHESTRATOR_SERVICE_PORT:-8084}"
+echo "  assistant:   http://localhost:${ASSISTANT_SERVICE_PORT:-8083}"
 echo "  tickets:     http://localhost:${TICKET_SERVICE_PORT:-8085}"
 echo "  notify:      http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}"
 echo

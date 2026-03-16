@@ -1,7 +1,7 @@
 # Phase 3 Flow Ledger
 
 Date: 2026-03-07
-Environment: local (`api-gateway` on `8080`, `knowledge-base-service` on `8083`, Postgres `5432`, MinIO `9000`, RabbitMQ `5672`)
+Environment: local (`api-gateway` on `8080`, `assistant-service` on `8083`, Postgres `5432`, MinIO `9000`, RabbitMQ `5672`)
 
 ## Scope
 Validated Phase 3 runtime flow through API Gateway:
@@ -48,7 +48,7 @@ Run timestamp: 2026-03-07 17:11 (Europe/Athens)
 - Delete API: `DELETE /documents/{id}` returned `204`
 - Unauthorized check: `GET /documents` without JWT returned `401`
 - Validation check: uploading unsupported `.csv` returned `400`
-- Event publishing check: knowledge-service log contains `knowledge_document_processed_event_published` for processed document id
+- Event publishing check: assistant-service log contains `assistant_document_processed_event_published` for processed document id
 
 ## Notes
 - Phase 3 currently supports `.txt` and `.md` only.

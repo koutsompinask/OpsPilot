@@ -1,10 +1,16 @@
 ## Pending
 - [ ] Phase 6: Frontend redesign polish follow-ups (post-implementation adjustments)
+- [ ] Review remaining backend service boundaries after the RAG merge and identify any further consolidation candidates
 
 ## To-Do
 - [ ] No active implementation task in progress
 
 ## Done
+- [x] Reviewed current assistant-service merge and adjacent wiring for best-practice issues (DRY, SOLID, KISS, testability)
+- [x] Verified focused review targets with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test :services:api-gateway:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
+- [x] Merged `knowledge-base-service` and `ai-orchestrator-service` into `assistant-service`, preserving `/documents/**` and `/chat/**` behavior behind one backend runtime
+- [x] Repointed gateway, local startup, compose/env, docs, and verification scripts to the merged assistant runtime
+- [x] Verified merged backend behavior (`:services:assistant-service:test`, `:services:api-gateway:test`, `bash scripts/verify-service-structure.sh`, `bash -n scripts/start-local.sh`, `docker compose --env-file .env.example config`, `timeout 300s ./scripts/start-local.sh .env.example` reached `[ready]`)
 - [x] Phase 6A: implemented `/tickets` frontend workspace with editorial support-radar hero, searchable/filterable queue, detail panel, and role-aware admin status controls
 - [x] Phase 6A: added frontend ticket API client/types and updated frontend guidance/README to reflect the live tickets route
 - [x] Phase 5: implemented `ticket-service` persistence, auth, APIs, and `TicketCreated` event publishing

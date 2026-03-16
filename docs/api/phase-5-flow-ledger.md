@@ -1,7 +1,7 @@
 # Phase 5 Flow Ledger
 
 Date: 2026-03-13
-Environment: local backend stack via `scripts/start-local.sh` (`api-gateway` on `8080`, `auth-service` on `8081`, `tenant-service` on `8082`, `knowledge-base-service` on `8083`, `ai-orchestrator-service` on `8084`, `ticket-service` on `8085`, `notification-service` on `8086`, webhook receiver on `8090`)
+Environment: local backend stack via `scripts/start-local.sh` (`api-gateway` on `8080`, `auth-service` on `8081`, `tenant-service` on `8082`, `assistant-service` on `8083`, `ticket-service` on `8085`, `notification-service` on `8086`, webhook receiver on `8090`)
 
 ## Scope
 Validated Phase 5 backend support workflow through API Gateway and local event delivery:

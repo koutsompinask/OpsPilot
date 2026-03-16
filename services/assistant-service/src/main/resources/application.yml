@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: assistant-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:opspilot}?currentSchema=knowledge
+    username: ${POSTGRES_USER:opspilot}
+    password: ${POSTGRES_PASSWORD:opspilot}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: knowledge
+    open-in-view: false
+  flyway:
+    enabled: true
+    default-schema: knowledge
+    schemas: knowledge
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
+  servlet:
+    multipart:
+      max-file-size: ${ASSISTANT_MAX_FILE_SIZE:10MB}
+      max-request-size: ${ASSISTANT_MAX_REQUEST_SIZE:10MB}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+assistant:
+  embedding:
+    provider: ${ASSISTANT_EMBEDDING_PROVIDER:local}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+      url: ${OPENAI_EMBEDDING_URL:https://api.openai.com/v1/embeddings}
+  chunking:
+    chunk-size: ${ASSISTANT_CHUNK_SIZE:1000}
+    chunk-overlap: ${ASSISTANT_CHUNK_OVERLAP:200}
+  storage:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    region: ${S3_REGION:us-east-1}
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+    bucket: ${S3_BUCKET:knowledge-documents}
+    auto-create-bucket: ${S3_AUTO_CREATE_BUCKET:true}
+  messaging:
+    enabled: ${ASSISTANT_MESSAGING_ENABLED:true}
+    document-processed-exchange: ${DOCUMENT_PROCESSED_EXCHANGE:opspilot.events}
+    document-processed-routing-key: ${DOCUMENT_PROCESSED_ROUTING_KEY:document.processed}
+
+ai:
+  chat:
+    default-top-k: ${AI_CHAT_DEFAULT_TOP_K:4}
+    low-confidence-threshold: ${AI_CHAT_LOW_CONFIDENCE_THRESHOLD:0.55}
+  answer:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
+      url: ${OPENAI_CHAT_URL:https://api.openai.com/v1/chat/completions}
+
+ticket-service:
+  base-url: ${TICKET_SERVICE_BASE_URL:http://localhost:8085}
+  service-token: ${INTERNAL_SERVICE_TOKEN:opspilot-internal-dev-token}

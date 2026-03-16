@@ -7,8 +7,7 @@ SERVICES=(
   "api-gateway:com/opspilot/apigateway"
   "auth-service:com/opspilot/auth"
   "tenant-service:com/opspilot/tenant"
-  "knowledge-base-service:com/opspilot/knowledgebase"
-  "ai-orchestrator-service:com/opspilot/aiorchestrator"
+  "assistant-service:com/opspilot/assistant"
   "ticket-service:com/opspilot/ticket"
   "notification-service:com/opspilot/notification"
 )

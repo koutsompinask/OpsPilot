@@ -1,7 +1,7 @@
 # Phase 4 Flow Ledger
 
 Date: 2026-03-07
-Environment: isolated local alt-port stack (`api-gateway` on `18080`, `ai-orchestrator-service` on `18084`, `auth-service` on `18081`, `tenant-service` on `18082`, `knowledge-base-service` on `18083`)
+Environment: isolated local alt-port stack (`api-gateway` on `18080`, `assistant-service` on `18083`, `auth-service` on `18081`, `tenant-service` on `18082`)
 
 ## Scope
 Validated Phase 4 runtime flow through API Gateway:
