@@ -1,7 +1,7 @@
 # OpsPilot Implementation Plan
 
 Last updated: 2026-03-16
-Status: backend phases 1-5 are implemented; frontend core flows plus tickets workspace are implemented; analytics, production infra, CI/CD, and cloud deployment remain open.
+Status: backend phases 1-5 are implemented; frontend core flows plus tickets workspace are implemented; local dockerized infrastructure for implemented services is in progress with runtime-only app images fed by host-built jars; analytics, production infra, CI/CD, and cloud deployment remain open.
 
 ## Project Intent
 
@@ -44,7 +44,7 @@ opspilot/
 Notes:
 - `knowledge-base-service` and `ai-orchestrator-service` were intentionally consolidated into `assistant-service`.
 - `analytics-service` still exists as a scaffold only.
-- `infra/*` directories are still mostly placeholders for later phases.
+- `infra/*` directories are still mostly placeholders for later phases, while the root `docker-compose.yml` is the active local infrastructure entrypoint.
 
 Backend package convention for implemented services remains mandatory:
 - use `config`, `controller`, `service`, `repository`, `domain`, `dto`, `mapper`, `exception`, `security`, `util`
@@ -186,6 +186,7 @@ Purpose:
 
 Status:
 - scaffold only; no business endpoints implemented yet
+- intentionally excluded from the active local docker stack until a later analytics phase
 
 ## Data and Integration Model
 

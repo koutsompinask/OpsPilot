@@ -30,3 +30,13 @@
 - What went wrong: `scripts/start-local.sh` launched several backend services in parallel, but the readiness poll budget was too small, so healthy services missed the cutoff and the smoke run failed.
 - Preventive rule: Size readiness timeouts for worst-case local startup under concurrent `bootRun`, not just ideal warm-cache starts.
 - Early detection: Always run one practical `start-local.sh` smoke after topology changes and inspect whether failures are actual boot errors or timeout-budget issues.
+
+### 6) Initial Docker refactor kept build logic inside service images
+- What went wrong: The first dockerization pass copied Gradle wrapper files into each backend image and rebuilt each service jar inside Docker, which made local image builds redundant and slower than necessary for this repo.
+- Preventive rule: For local infrastructure work here, prefer runtime-only backend images that consume host-built artifacts unless the task explicitly requires hermetic in-image builds.
+- Early detection: Before finalizing Dockerfiles, ask whether the repository wants artifact creation handled locally/CI outside Docker or directly during `docker build`; if the answer is "manual Gradle now, CI later", Dockerfiles should only package existing jars.
+
+### 7) Old host-run services can block the new containerized stack
+- What went wrong: Stale `bootRun` Java processes and a Vite dev server from the previous workflow kept standard ports bound, so Compose startup failed on port allocation even though the Docker configuration itself was correct.
+- Preventive rule: When replacing a host-run workflow with Dockerized startup, add explicit port preflight checks and orphan cleanup to the startup helper.
+- Early detection: Before blaming Compose wiring, inspect the standard app ports (`5173`, `8080-8086`) for existing listeners and stop stale host processes first.

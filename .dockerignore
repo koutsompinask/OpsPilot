@@ -1,0 +1,8 @@
+.git
+.github
+.gradle
+.idea
+.vscode
+frontend/node_modules
+.logs
+*.log

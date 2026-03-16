@@ -59,60 +59,223 @@ services:
       retries: 10
 
   frontend:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    image: opspilot/frontend:local
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   api-gateway:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    image: opspilot/api-gateway:local
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-secret-for-local-dev-only}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      AUTH_SERVICE_URL: http://auth-service:8081
+      TENANT_SERVICE_URL: http://tenant-service:8082
+      ASSISTANT_SERVICE_URL: http://assistant-service:8083
+      TICKET_SERVICE_BASE_URL: http://ticket-service:8085
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      tenant-service:
+        condition: service_healthy
+      assistant-service:
+        condition: service_healthy
+      ticket-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
   auth-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    image: opspilot/auth-service:local
     ports:
       - "${AUTH_SERVICE_PORT:-8081}:8081"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-secret-for-local-dev-only}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-opspilot-internal-dev-token}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-opspilot}
+      POSTGRES_USER: ${POSTGRES_USER:-opspilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opspilot}
+      TENANT_SERVICE_BASE_URL: http://tenant-service:8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      tenant-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
   tenant-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: services/tenant-service/Dockerfile
+    image: opspilot/tenant-service:local
     ports:
       - "${TENANT_SERVICE_PORT:-8082}:8082"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-secret-for-local-dev-only}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-opspilot-internal-dev-token}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-opspilot}
+      POSTGRES_USER: ${POSTGRES_USER:-opspilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opspilot}
+      AUTH_SERVICE_BASE_URL: http://auth-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
   assistant-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: services/assistant-service/Dockerfile
+    image: opspilot/assistant-service:local
     ports:
       - "${ASSISTANT_SERVICE_PORT:-8083}:8083"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-secret-for-local-dev-only}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-opspilot-internal-dev-token}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-opspilot}
+      POSTGRES_USER: ${POSTGRES_USER:-opspilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opspilot}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-knowledge-documents}
+      S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-true}
+      ASSISTANT_EMBEDDING_PROVIDER: ${ASSISTANT_EMBEDDING_PROVIDER:-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_URL: ${OPENAI_EMBEDDING_URL:-https://api.openai.com/v1/embeddings}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}
+      OPENAI_CHAT_URL: ${OPENAI_CHAT_URL:-https://api.openai.com/v1/chat/completions}
+      AI_CHAT_DEFAULT_TOP_K: ${AI_CHAT_DEFAULT_TOP_K:-4}
+      AI_CHAT_LOW_CONFIDENCE_THRESHOLD: ${AI_CHAT_LOW_CONFIDENCE_THRESHOLD:-0.55}
+      ASSISTANT_MESSAGING_ENABLED: ${ASSISTANT_MESSAGING_ENABLED:-true}
+      DOCUMENT_PROCESSED_EXCHANGE: ${DOCUMENT_PROCESSED_EXCHANGE:-opspilot.events}
+      DOCUMENT_PROCESSED_ROUTING_KEY: ${DOCUMENT_PROCESSED_ROUTING_KEY:-document.processed}
+      TICKET_SERVICE_BASE_URL: http://ticket-service:8085
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      ticket-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
   ticket-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: services/ticket-service/Dockerfile
+    image: opspilot/ticket-service:local
     ports:
       - "${TICKET_SERVICE_PORT:-8085}:8085"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-secret-for-local-dev-only}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-opspilot-internal-dev-token}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-opspilot}
+      POSTGRES_USER: ${POSTGRES_USER:-opspilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opspilot}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      TICKET_MESSAGING_ENABLED: ${TICKET_MESSAGING_ENABLED:-true}
+      TICKET_CREATED_EXCHANGE: ${TICKET_CREATED_EXCHANGE:-opspilot.events}
+      TICKET_CREATED_ROUTING_KEY: ${TICKET_CREATED_ROUTING_KEY:-ticket.created}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
   notification-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: opspilot/notification-service:local
     ports:
       - "${NOTIFICATION_SERVICE_PORT:-8086}:8086"
-
-  analytics-service:
-    image: alpine:3.20
-    profiles: ["apps"]
-    command: ["sh", "-c", "while true; do sleep 3600; done"]
-    ports:
-      - "${ANALYTICS_SERVICE_PORT:-8087}:8087"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      NOTIFICATION_MESSAGING_ENABLED: ${NOTIFICATION_MESSAGING_ENABLED:-true}
+      NOTIFICATION_EXCHANGE: ${NOTIFICATION_EXCHANGE:-opspilot.events}
+      TICKET_CREATED_ROUTING_KEY: ${TICKET_CREATED_ROUTING_KEY:-ticket.created}
+      DOCUMENT_PROCESSED_ROUTING_KEY: ${DOCUMENT_PROCESSED_ROUTING_KEY:-document.processed}
+      NOTIFICATION_TICKET_CREATED_QUEUE: ${NOTIFICATION_TICKET_CREATED_QUEUE:-notification.ticket.created}
+      NOTIFICATION_DOCUMENT_PROCESSED_QUEUE: ${NOTIFICATION_DOCUMENT_PROCESSED_QUEUE:-notification.document.processed}
+      NOTIFICATION_WEBHOOK_ENABLED: ${NOTIFICATION_WEBHOOK_ENABLED:-true}
+      NOTIFICATION_WEBHOOK_URL: http://webhook-receiver/events
+      NOTIFICATION_WEBHOOK_AUTH_HEADER_NAME: ${NOTIFICATION_WEBHOOK_AUTH_HEADER_NAME:-}
+      NOTIFICATION_WEBHOOK_AUTH_HEADER_VALUE: ${NOTIFICATION_WEBHOOK_AUTH_HEADER_VALUE:-}
+      NOTIFICATION_WEBHOOK_CONNECT_TIMEOUT_MS: ${NOTIFICATION_WEBHOOK_CONNECT_TIMEOUT_MS:-2000}
+      NOTIFICATION_WEBHOOK_READ_TIMEOUT_MS: ${NOTIFICATION_WEBHOOK_READ_TIMEOUT_MS:-5000}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      webhook-receiver:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
 volumes:
   postgres_data:

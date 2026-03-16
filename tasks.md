@@ -4,12 +4,13 @@
 - [ ] Implement `analytics-service` in a later dedicated analytics phase; keep it out of active local infrastructure until then
 
 ## To-Do
-- [ ] Replace placeholder app containers with real Compose-managed images for implemented services
-- [ ] Convert `scripts/start-local.sh` to a Compose-first startup helper
-- [ ] Update docs/planning notes for dockerized local infra and deferred analytics
-- [ ] Verify image builds and containerized local startup flow
+- [ ] No active implementation task in progress
 
 ## Done
+- [x] Refactored implemented backend Dockerfiles to runtime-only images that copy prebuilt `bootJar` artifacts instead of building inside Docker
+- [x] Aligned `docker-compose.yml` and `scripts/start-local.sh` around host-built Gradle jars, Compose-managed runtime containers, orphan cleanup, and host-port preflight checks
+- [x] Updated `README.md` and `plan.md` to document the prebuilt-jar Docker workflow and keep `analytics-service` deferred from the active local stack
+- [x] Verified runtime-only Docker flow on 2026-03-16 with `./gradlew --project-cache-dir /tmp/opspilot-gradle-cache :services:api-gateway:bootJar :services:auth-service:bootJar :services:tenant-service:bootJar :services:assistant-service:bootJar :services:ticket-service:bootJar :services:notification-service:bootJar` (`BUILD SUCCESSFUL`), `bash -n scripts/start-local.sh`, `docker compose --env-file .env.example config`, `./scripts/start-local.sh .env.example` (`[ready]`), `docker compose --env-file .env.example ps` (all implemented services up; backend services healthy; frontend container started on `5173`), `curl -fsS http://localhost:8080/actuator/health` (`{\"status\":\"UP\"}`), and `POST /auth/register` through gateway returning tokens for `infra.verify@example.com`
 - [x] Added explicit per-user password salt support in `auth-service` with a dedicated hashing service that stores `password_salt` plus bcrypt `password_hash`
 - [x] Updated auth DB initialization and added a forward Flyway migration for `password_salt` in `auth.auth_users`
 - [x] Verified salt-based hashing and login with `./gradlew :services:auth-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
