@@ -6,6 +6,16 @@
 - [ ] No active implementation task in progress
 
 ## Done
+- [x] Fixed review item: renamed assistant-service persistence schema from `knowledge` to `assistant`
+- [x] Verified schema rename with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
+- [x] Fixed review item: moved assistant-service storage bucket initialization from `DocumentStorageService` constructor to explicit startup initializer
+- [x] Verified storage initialization refactor with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
+- [x] Fixed review item: removed duplicated pgvector serialization in assistant-service repositories with shared repository helper
+- [x] Verified pgvector serialization refactor with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
+- [x] Fixed review item: batch document chunk persistence in assistant-service with JDBC batch inserts in `DocumentChunkRepository`
+- [x] Verified batched chunk persistence with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
+- [x] Fixed review item: added assistant-service document workflow coverage for controller, service, and ingestion failure paths
+- [x] Verified document workflow coverage with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
 - [x] Reviewed current assistant-service merge and adjacent wiring for best-practice issues (DRY, SOLID, KISS, testability)
 - [x] Verified focused review targets with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test :services:api-gateway:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
 - [x] Merged `knowledge-base-service` and `ai-orchestrator-service` into `assistant-service`, preserving `/documents/**` and `/chat/**` behavior behind one backend runtime
