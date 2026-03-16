@@ -24,6 +24,9 @@ public class AuthUser {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "password_salt", nullable = false, length = 64)
+    private String passwordSalt;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -78,6 +81,14 @@ public class AuthUser {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getPasswordSalt() {
+        return passwordSalt;
+    }
+
+    public void setPasswordSalt(String passwordSalt) {
+        this.passwordSalt = passwordSalt;
     }
 
     public void setPasswordHash(String passwordHash) {

@@ -20,7 +20,6 @@ import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,20 +27,20 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final AuthUserRepository authUserRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHashService passwordHashService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final TenantClient tenantClient;
 
     public AuthService(
             AuthUserRepository authUserRepository,
-            PasswordEncoder passwordEncoder,
+            PasswordHashService passwordHashService,
             JwtService jwtService,
             RefreshTokenService refreshTokenService,
             TenantClient tenantClient
     ) {
         this.authUserRepository = authUserRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHashService = passwordHashService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.tenantClient = tenantClient;
@@ -83,7 +82,7 @@ public class AuthService {
                     return new UnauthorizedException("Invalid credentials");
                 });
 
-        if (!user.isActive() || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (!user.isActive() || !passwordHashService.matches(request.password(), user)) {
             log.warn("auth_login_failed email={} userId={} reason=inactive_or_bad_password", email, user.getId());
             throw new UnauthorizedException("Invalid credentials");
         }
@@ -121,11 +120,13 @@ public class AuthService {
     }
 
     private AuthUser createAuthUser(UUID userId, UUID tenantId, String email, String password, Role role) {
+        PasswordHashService.PasswordHash passwordHash = passwordHashService.hash(password);
         AuthUser user = new AuthUser();
         user.setId(userId);
         user.setTenantId(tenantId);
         user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setPasswordSalt(passwordHash.salt());
+        user.setPasswordHash(passwordHash.hash());
         user.setRole(role);
         user.setActive(true);
         return user;

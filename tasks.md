@@ -1,11 +1,18 @@
 ## Pending
 - [ ] Phase 6: Frontend redesign polish follow-ups (post-implementation adjustments)
 - [ ] Review remaining backend service boundaries after the RAG merge and identify any further consolidation candidates
+- [ ] Implement `analytics-service` in a later dedicated analytics phase; keep it out of active local infrastructure until then
 
 ## To-Do
-- [ ] No active implementation task in progress
+- [ ] Replace placeholder app containers with real Compose-managed images for implemented services
+- [ ] Convert `scripts/start-local.sh` to a Compose-first startup helper
+- [ ] Update docs/planning notes for dockerized local infra and deferred analytics
+- [ ] Verify image builds and containerized local startup flow
 
 ## Done
+- [x] Added explicit per-user password salt support in `auth-service` with a dedicated hashing service that stores `password_salt` plus bcrypt `password_hash`
+- [x] Updated auth DB initialization and added a forward Flyway migration for `password_salt` in `auth.auth_users`
+- [x] Verified salt-based hashing and login with `./gradlew :services:auth-service:test` on 2026-03-16 (`BUILD SUCCESSFUL`)
 - [x] Refreshed `plan.md` to match current repo reality, commit history, `tasks.md`, and `tasks/lessons.md`
 - [x] Verified plan refresh by checking `git log --oneline --decorate -n 25`, `README.md`, `docs/api/phase-4-flow-ledger.md`, `docs/api/phase-5-flow-ledger.md`, and `docs/architecture/service-boundary-review.md` on 2026-03-16
 - [x] Fixed review item: renamed assistant-service persistence schema from `knowledge` to `assistant`
