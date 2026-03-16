@@ -1,28 +1,20 @@
 package com.opspilot.assistant.service.storage;
 
 import com.opspilot.assistant.exception.StorageException;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 @Service
 public class DocumentStorageService {
-
-    private static final Logger log = LoggerFactory.getLogger(DocumentStorageService.class);
 
     private final S3Client s3Client;
     private final StorageProperties properties;
@@ -30,7 +22,6 @@ public class DocumentStorageService {
     public DocumentStorageService(S3Client s3Client, StorageProperties properties) {
         this.s3Client = s3Client;
         this.properties = properties;
-        ensureBucket();
     }
 
     public String store(UUID tenantId, UUID documentId, MultipartFile file) {
@@ -69,26 +60,6 @@ public class DocumentStorageService {
                     .build());
         } catch (S3Exception ex) {
             throw new StorageException("Failed to delete document from storage", ex);
-        }
-    }
-
-    private void ensureBucket() {
-        if (!properties.isAutoCreateBucket()) {
-            return;
-        }
-
-        try {
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(properties.getBucket()).build());
-        } catch (NoSuchBucketException ex) {
-            log.info("assistant_storage_bucket_create bucket={}", properties.getBucket());
-            s3Client.createBucket(CreateBucketRequest.builder().bucket(properties.getBucket()).build());
-        } catch (S3Exception ex) {
-            if (ex.statusCode() == 404) {
-                log.info("assistant_storage_bucket_create bucket={}", properties.getBucket());
-                s3Client.createBucket(CreateBucketRequest.builder().bucket(properties.getBucket()).build());
-            } else {
-                throw new StorageException("Failed to initialize storage bucket", ex);
-            }
         }
     }
 
