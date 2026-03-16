@@ -22,8 +22,8 @@ public class DocumentChunkSearchRepository {
                        dc.chunk_index,
                        dc.chunk_text,
                        (dc.embedding <=> CAST(:embedding AS vector)) AS distance
-                FROM knowledge.document_chunks dc
-                INNER JOIN knowledge.documents d ON d.id = dc.document_id
+                FROM assistant.document_chunks dc
+                INNER JOIN assistant.documents d ON d.id = dc.document_id
                 WHERE dc.tenant_id = :tenantId
                   AND d.tenant_id = :tenantId
                   AND d.status = 'READY'
@@ -33,7 +33,7 @@ public class DocumentChunkSearchRepository {
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("tenantId", tenantId)
-                .addValue("embedding", toVectorLiteral(queryEmbedding))
+                .addValue("embedding", PgVectorLiteral.from(queryEmbedding))
                 .addValue("limit", limit);
 
         return jdbcTemplate.query(sql, params, (rs, rowNum) -> new RetrievedChunk(
@@ -43,17 +43,5 @@ public class DocumentChunkSearchRepository {
                 rs.getString("chunk_text"),
                 rs.getDouble("distance")
         ));
-    }
-
-    private String toVectorLiteral(List<Double> embedding) {
-        StringBuilder builder = new StringBuilder("[");
-        for (int i = 0; i < embedding.size(); i++) {
-            if (i > 0) {
-                builder.append(',');
-            }
-            builder.append(embedding.get(i));
-        }
-        builder.append(']');
-        return builder.toString();
     }
 }

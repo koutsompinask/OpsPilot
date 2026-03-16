@@ -20,7 +20,7 @@ public class DocumentChunkRepository {
     public void replaceForDocument(UUID documentId, UUID tenantId, List<String> chunks, List<List<Double>> embeddings) {
         deleteForDocument(documentId, tenantId);
         String sql = """
-                INSERT INTO knowledge.document_chunks
+                INSERT INTO assistant.document_chunks
                 (id, document_id, tenant_id, chunk_index, chunk_text, embedding)
                 VALUES (:id, :documentId, :tenantId, :chunkIndex, :chunkText, CAST(:embedding AS vector))
                 """;
@@ -37,7 +37,7 @@ public class DocumentChunkRepository {
                     .addValue("tenantId", tenantId)
                     .addValue("chunkIndex", i)
                     .addValue("chunkText", chunks.get(i))
-                    .addValue("embedding", toVectorLiteral(embeddings.get(i)));
+                    .addValue("embedding", PgVectorLiteral.from(embeddings.get(i)));
         }
         jdbcTemplate.batchUpdate(sql, batch);
     }
@@ -45,22 +45,10 @@ public class DocumentChunkRepository {
     @Transactional
     public void deleteForDocument(UUID documentId, UUID tenantId) {
         jdbcTemplate.update(
-                "DELETE FROM knowledge.document_chunks WHERE document_id = :documentId AND tenant_id = :tenantId",
+                "DELETE FROM assistant.document_chunks WHERE document_id = :documentId AND tenant_id = :tenantId",
                 new MapSqlParameterSource()
                         .addValue("documentId", documentId)
                         .addValue("tenantId", tenantId)
         );
-    }
-
-    private String toVectorLiteral(List<Double> embedding) {
-        StringBuilder builder = new StringBuilder("[");
-        for (int i = 0; i < embedding.size(); i++) {
-            if (i > 0) {
-                builder.append(',');
-            }
-            builder.append(embedding.get(i));
-        }
-        builder.append(']');
-        return builder.toString();
     }
 }
