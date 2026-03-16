@@ -38,7 +38,7 @@ class DocumentChunkRepositoryTest {
         repository.replaceForDocument(documentId, tenantId, chunks, embeddings);
 
         verify(jdbcTemplate).update(
-                eq("DELETE FROM knowledge.document_chunks WHERE document_id = :documentId AND tenant_id = :tenantId"),
+                eq("DELETE FROM assistant.document_chunks WHERE document_id = :documentId AND tenant_id = :tenantId"),
                 any(MapSqlParameterSource.class)
         );
 
@@ -64,7 +64,9 @@ class DocumentChunkRepositoryTest {
         repository.replaceForDocument(UUID.randomUUID(), UUID.randomUUID(), List.of(), List.of());
 
         verify(jdbcTemplate).update(
-                eq("DELETE FROM knowledge.document_chunks WHERE document_id = :documentId AND tenant_id = :tenantId"),
+                eq("DELETE FROM assistant.document_chunks WHERE document_id = :documentId AND tenant_id = :tenantId"),
                 any(MapSqlParameterSource.class)
         );
         verify(jdbcTemplate, never()).batchUpdate(any(String.class), any(MapSqlParameterSource[].class));
+    }
+}

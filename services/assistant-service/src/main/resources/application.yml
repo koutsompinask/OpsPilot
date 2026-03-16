@@ -2,7 +2,7 @@ spring:
   application:
     name: assistant-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:opspilot}?currentSchema=knowledge
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:opspilot}?currentSchema=assistant
     username: ${POSTGRES_USER:opspilot}
     password: ${POSTGRES_PASSWORD:opspilot}
   jpa:
@@ -10,12 +10,12 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        default_schema: knowledge
+        default_schema: assistant
     open-in-view: false
   flyway:
     enabled: true
-    default-schema: knowledge
-    schemas: knowledge
+    default-schema: assistant
+    schemas: assistant
   security:
     oauth2:
       resourceserver:

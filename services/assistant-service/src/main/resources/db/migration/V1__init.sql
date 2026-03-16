@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE SCHEMA IF NOT EXISTS knowledge;
+CREATE SCHEMA IF NOT EXISTS assistant;
 
-CREATE TABLE IF NOT EXISTS knowledge.documents (
+CREATE TABLE IF NOT EXISTS assistant.documents (
     id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL,
     uploaded_by UUID NOT NULL,
@@ -16,16 +16,16 @@ CREATE TABLE IF NOT EXISTS knowledge.documents (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_documents_tenant_created_at ON knowledge.documents (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_documents_tenant_created_at ON assistant.documents (tenant_id, created_at DESC);
 
-CREATE TABLE IF NOT EXISTS knowledge.document_chunks (
+CREATE TABLE IF NOT EXISTS assistant.document_chunks (
     id UUID PRIMARY KEY,
-    document_id UUID NOT NULL REFERENCES knowledge.documents(id) ON DELETE CASCADE,
+    document_id UUID NOT NULL REFERENCES assistant.documents(id) ON DELETE CASCADE,
     tenant_id UUID NOT NULL,
     chunk_index INT NOT NULL,
     chunk_text TEXT NOT NULL,
     embedding VECTOR(1536) NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON knowledge.document_chunks (document_id);
-CREATE INDEX IF NOT EXISTS idx_document_chunks_tenant_id ON knowledge.document_chunks (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON assistant.document_chunks (document_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_tenant_id ON assistant.document_chunks (tenant_id);
