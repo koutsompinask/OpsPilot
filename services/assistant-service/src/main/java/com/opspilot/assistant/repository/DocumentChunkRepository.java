@@ -25,16 +25,21 @@ public class DocumentChunkRepository {
                 VALUES (:id, :documentId, :tenantId, :chunkIndex, :chunkText, CAST(:embedding AS vector))
                 """;
 
+        if (chunks.isEmpty()) {
+            return;
+        }
+
+        MapSqlParameterSource[] batch = new MapSqlParameterSource[chunks.size()];
         for (int i = 0; i < chunks.size(); i++) {
-            MapSqlParameterSource params = new MapSqlParameterSource()
+            batch[i] = new MapSqlParameterSource()
                     .addValue("id", UUID.randomUUID())
                     .addValue("documentId", documentId)
                     .addValue("tenantId", tenantId)
                     .addValue("chunkIndex", i)
                     .addValue("chunkText", chunks.get(i))
                     .addValue("embedding", toVectorLiteral(embeddings.get(i)));
-            jdbcTemplate.update(sql, params);
         }
+        jdbcTemplate.batchUpdate(sql, batch);
     }
 
     @Transactional
