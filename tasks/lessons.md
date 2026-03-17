@@ -40,3 +40,10 @@
 - What went wrong: Stale `bootRun` Java processes and a Vite dev server from the previous workflow kept standard ports bound, so Compose startup failed on port allocation even though the Docker configuration itself was correct.
 - Preventive rule: When replacing a host-run workflow with Dockerized startup, add explicit port preflight checks and orphan cleanup to the startup helper.
 - Early detection: Before blaming Compose wiring, inspect the standard app ports (`5173`, `8080-8086`) for existing listeners and stop stale host processes first.
+
+## 2026-03-17
+
+### 8) Heuristic reranking was presented as if retrieval quality had been fixed
+- What went wrong: The initial retrieval improvement kept a hand-tuned lexical scorer in place of a true reranker model, so obvious policy questions still failed despite the pipeline sounding more advanced on paper.
+- Preventive rule: When promising a reranker, use a real model-backed cross-encoder stage or explicitly label the logic as heuristic fallback only.
+- Early detection: Before handoff, inspect whether the retrieval stage makes an actual model inference call for `query + chunk` pairs; if not, it is not a real reranker.

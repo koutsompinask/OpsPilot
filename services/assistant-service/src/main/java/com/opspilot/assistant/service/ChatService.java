@@ -1,16 +1,17 @@
 package com.opspilot.assistant.service;
 
 import com.opspilot.assistant.dto.ChatAskResponse;
-import com.opspilot.assistant.dto.InternalCreateTicketRequest;
+import com.opspilot.assistant.dto.ChatEvidenceResponse;
 import com.opspilot.assistant.dto.ChatSourceResponse;
+import com.opspilot.assistant.dto.InternalCreateTicketRequest;
 import com.opspilot.assistant.exception.BadRequestException;
-import com.opspilot.assistant.repository.DocumentChunkSearchRepository;
 import com.opspilot.assistant.repository.RetrievedChunk;
 import com.opspilot.assistant.security.CurrentUser;
 import com.opspilot.assistant.service.answering.AnswerGenerationResult;
 import com.opspilot.assistant.service.answering.AnswerService;
 import com.opspilot.assistant.service.embedding.EmbeddingService;
 import com.opspilot.assistant.service.integration.TicketClient;
+import com.opspilot.assistant.service.retrieval.ChunkRetrievalService;
 import com.opspilot.assistant.util.logging.RequestCorrelation;
 import java.util.List;
 import org.slf4j.Logger;
@@ -23,7 +24,8 @@ public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
-    private final DocumentChunkSearchRepository searchRepository;
+    private final ChunkRetrievalService chunkRetrievalService;
+    private final DocumentEmbeddingMaintenanceService documentEmbeddingMaintenanceService;
     private final EmbeddingService embeddingService;
     private final AnswerService answerService;
     private final TicketClient ticketClient;
@@ -31,14 +33,16 @@ public class ChatService {
     private final double lowConfidenceThreshold;
 
     public ChatService(
-            DocumentChunkSearchRepository searchRepository,
+            ChunkRetrievalService chunkRetrievalService,
+            DocumentEmbeddingMaintenanceService documentEmbeddingMaintenanceService,
             EmbeddingService embeddingService,
             AnswerService answerService,
             TicketClient ticketClient,
             @Value("${ai.chat.default-top-k:4}") int defaultTopK,
             @Value("${ai.chat.low-confidence-threshold:0.55}") double lowConfidenceThreshold
     ) {
-        this.searchRepository = searchRepository;
+        this.chunkRetrievalService = chunkRetrievalService;
+        this.documentEmbeddingMaintenanceService = documentEmbeddingMaintenanceService;
         this.embeddingService = embeddingService;
         this.answerService = answerService;
         this.ticketClient = ticketClient;
@@ -58,16 +62,50 @@ public class ChatService {
                 topK
         );
 
-        List<Double> queryEmbedding = embeddingService.provider().embed(List.of(normalizedQuestion)).getFirst();
-        List<RetrievedChunk> chunks = searchRepository.searchTopChunks(user.tenantId(), queryEmbedding, topK);
+        EmbeddingIndexRefreshResult refreshResult = documentEmbeddingMaintenanceService.ensureCurrentProfile(
+                user.tenantId(),
+                RequestCorrelation.currentRequestId()
+        );
+        String activeProfile = embeddingService.profile().id();
+        List<RetrievedChunk> chunks = chunkRetrievalService.retrieve(user.tenantId(), normalizedQuestion, topK);
+
+        if (chunks.isEmpty() && refreshResult.scheduledCount() > 0 && refreshResult.readyDocumentCount() == 0) {
+            log.info(
+                    "ai_chat_reindex_in_progress tenantId={} userId={} scheduledCount={} profile={}",
+                    user.tenantId(),
+                    user.userId(),
+                    refreshResult.scheduledCount(),
+                    activeProfile
+            );
+            return new ChatAskResponse(
+                    "Your knowledge base is being re-indexed for the active embedding model. Please retry in a moment.",
+                    "The active embedding profile has no ready documents yet, so retrieval was deferred until re-indexing completes.",
+                    0.0,
+                    List.of(),
+                    List.of(),
+                    "insufficient-evidence",
+                    false
+            );
+        }
+
         AnswerGenerationResult answer = answerService.generate(normalizedQuestion, chunks);
 
-        double confidence = computeConfidence(chunks);
-        boolean lowConfidence = confidence < lowConfidenceThreshold;
+        double confidence = computeConfidence(chunks, answer);
+        boolean lowConfidence = confidence < lowConfidenceThreshold || "insufficient-evidence".equals(answer.answerMode());
         boolean ticketCreated = false;
 
         List<ChatSourceResponse> sources = chunks.stream()
                 .map(chunk -> new ChatSourceResponse(chunk.documentName(), "chunk-" + chunk.chunkIndex()))
+                .toList();
+
+        List<ChatEvidenceResponse> evidence = chunks.stream()
+                .map(chunk -> new ChatEvidenceResponse(
+                        chunk.documentName(),
+                        "chunk-" + chunk.chunkIndex(),
+                        chunk.sectionTitle(),
+                        trimSnippet(chunk.chunkText()),
+                        chunk.rerankerScore()
+                ))
                 .toList();
 
         if (lowConfidence) {
@@ -75,17 +113,26 @@ public class ChatService {
         }
 
         log.info(
-                "ai_chat_response_ready tenantId={} userId={} chunkCount={} confidence={} lowConfidence={} answerProvider={} ticketCreated={}",
+                "ai_chat_response_ready tenantId={} userId={} chunkCount={} confidence={} lowConfidence={} answerProvider={} answerMode={} ticketCreated={}",
                 user.tenantId(),
                 user.userId(),
                 chunks.size(),
                 confidence,
                 lowConfidence,
                 answer.provider(),
+                answer.answerMode(),
                 ticketCreated
         );
 
-        return new ChatAskResponse(answer.answer(), confidence, sources, ticketCreated);
+        return new ChatAskResponse(
+                answer.answer(),
+                answer.reasoningSummary(),
+                confidence,
+                sources,
+                evidence,
+                answer.answerMode(),
+                ticketCreated
+        );
     }
 
     private int normalizeTopK(Integer requestedTopK) {
@@ -96,20 +143,31 @@ public class ChatService {
         return topK;
     }
 
-    private double computeConfidence(List<RetrievedChunk> chunks) {
-        if (chunks.isEmpty()) {
+    private double computeConfidence(List<RetrievedChunk> chunks, AnswerGenerationResult answer) {
+        if (chunks.isEmpty() || "insufficient-evidence".equals(answer.answerMode())) {
             return 0.0;
         }
 
         int sampleSize = Math.min(3, chunks.size());
         double total = 0.0;
         for (int i = 0; i < sampleSize; i++) {
-            double distance = chunks.get(i).distance();
-            double boundedDistance = Math.max(0.0, Math.min(2.0, distance));
-            total += 1.0 - (boundedDistance / 2.0);
+            total += chunks.get(i).rerankerScore();
         }
+
         double avg = total / sampleSize;
-        return Math.round(avg * 1000.0) / 1000.0;
+        double normalized = Math.max(0.0, Math.min(1.0, avg));
+        return Math.round(normalized * 1000.0) / 1000.0;
+    }
+
+    private String trimSnippet(String text) {
+        if (text == null) {
+            return "";
+        }
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= 240) {
+            return normalized;
+        }
+        return normalized.substring(0, 237).trim() + "...";
     }
 
     private boolean createSupportTicket(

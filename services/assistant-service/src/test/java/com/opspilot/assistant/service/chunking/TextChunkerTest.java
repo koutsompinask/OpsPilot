@@ -8,20 +8,31 @@ import org.junit.jupiter.api.Test;
 class TextChunkerTest {
 
     @Test
-    void shouldSplitTextWithOverlap() {
-        TextChunker chunker = new TextChunker(10, 2);
+    void shouldCreateStructuredChunksFromPolicyText() {
+        TextChunker chunker = new TextChunker(180, 1);
 
-        List<String> chunks = chunker.chunk("abcdefghijklmnopqrstuvwxyz");
+        List<TextChunk> chunks = chunker.chunk("""
+                Front Desk Operations
 
-        assertThat(chunks).hasSize(4);
-        assertThat(chunks.get(0)).isEqualTo("abcdefghij");
-        assertThat(chunks.get(1)).isEqualTo("ijklmnopqr");
-        assertThat(chunks.get(2)).isEqualTo("qrstuvwxyz");
+                Check-in time starts at 15:00 local time.
+                Check-out time is 11:00 local time.
+
+                Early check-in policy:
+                - Subject to room availability.
+                - Before 12:00 may incur a 20 EUR fee.
+                """);
+
+        assertThat(chunks).isNotEmpty();
+        assertThat(chunks.stream().map(TextChunk::sectionTitle)).contains("Front Desk Operations");
+        assertThat(chunks.stream().map(TextChunk::text).toList()).anySatisfy(text -> {
+            assertThat(text).contains("Check-in");
+            assertThat(text).contains("Check-out");
+        });
     }
 
     @Test
     void shouldReturnEmptyForBlankText() {
-        TextChunker chunker = new TextChunker(10, 2);
+        TextChunker chunker = new TextChunker(180, 1);
         assertThat(chunker.chunk("   ")).isEmpty();
     }
 }

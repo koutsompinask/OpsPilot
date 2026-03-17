@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.opspilot.assistant.service.chunking.TextChunk;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,10 @@ class DocumentChunkRepositoryTest {
         DocumentChunkRepository repository = new DocumentChunkRepository(jdbcTemplate);
         UUID documentId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
-        List<String> chunks = List.of("first chunk", "second chunk");
+        List<TextChunk> chunks = List.of(
+                new TextChunk("first chunk", "General", "paragraph"),
+                new TextChunk("second chunk", "Policies", "list")
+        );
         List<List<Double>> embeddings = List.of(
                 List.of(0.1, 0.2),
                 List.of(0.3, 0.4)
@@ -51,9 +55,13 @@ class DocumentChunkRepositoryTest {
         assertThat(batch[0].getValue("tenantId")).isEqualTo(tenantId);
         assertThat(batch[0].getValue("chunkIndex")).isEqualTo(0);
         assertThat(batch[0].getValue("chunkText")).isEqualTo("first chunk");
+        assertThat(batch[0].getValue("sectionTitle")).isEqualTo("General");
+        assertThat(batch[0].getValue("chunkType")).isEqualTo("paragraph");
         assertThat(batch[0].getValue("embedding")).isEqualTo("[0.1,0.2]");
         assertThat(batch[1].getValue("chunkIndex")).isEqualTo(1);
         assertThat(batch[1].getValue("chunkText")).isEqualTo("second chunk");
+        assertThat(batch[1].getValue("sectionTitle")).isEqualTo("Policies");
+        assertThat(batch[1].getValue("chunkType")).isEqualTo("list");
         assertThat(batch[1].getValue("embedding")).isEqualTo("[0.3,0.4]");
     }
 

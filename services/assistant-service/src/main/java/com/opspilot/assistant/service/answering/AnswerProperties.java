@@ -1,0 +1,87 @@
+package com.opspilot.assistant.service.answering;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+@ConfigurationProperties(prefix = "ai.answer")
+public class AnswerProperties {
+
+    private String provider = "ollama";
+    private long requestTimeoutMs = 20000;
+    private final OpenAi openai = new OpenAi();
+    private final Ollama ollama = new Ollama();
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public long getRequestTimeoutMs() {
+        return requestTimeoutMs;
+    }
+
+    public void setRequestTimeoutMs(long requestTimeoutMs) {
+        this.requestTimeoutMs = requestTimeoutMs;
+    }
+
+    public OpenAi getOpenai() {
+        return openai;
+    }
+
+    public Ollama getOllama() {
+        return ollama;
+    }
+
+    public static class OpenAi {
+        private String apiKey = "";
+        private String model = "gpt-4o-mini";
+        private String url = "https://api.openai.com/v1/chat/completions";
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+    }
+
+    public static class Ollama {
+        private String model = "qwen2.5:7b-instruct";
+        private String url = "http://localhost:11434/api/generate";
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+    }
+}

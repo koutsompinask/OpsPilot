@@ -10,13 +10,25 @@ public class EmbeddingService {
 
     public EmbeddingService(
             LocalDeterministicEmbeddingProvider localProvider,
+            TeiEmbeddingProvider teiProvider,
+            OllamaEmbeddingProvider ollamaProvider,
             OpenAiEmbeddingProvider openAiProvider,
-            @Value("${assistant.embedding.provider:local}") String providerType
+            @Value("${assistant.embedding.provider:stub}") String providerType
     ) {
-        this.provider = "openai".equalsIgnoreCase(providerType) ? openAiProvider : localProvider;
+        this.provider = switch (providerType.toLowerCase()) {
+            case "tei" -> teiProvider;
+            case "ollama" -> ollamaProvider;
+            case "openai" -> openAiProvider;
+            case "stub", "local" -> localProvider;
+            default -> throw new IllegalArgumentException("Unsupported embedding provider: " + providerType);
+        };
     }
 
     public EmbeddingProvider provider() {
         return provider;
+    }
+
+    public EmbeddingProfile profile() {
+        return provider.profile();
     }
 }

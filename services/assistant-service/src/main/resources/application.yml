@@ -42,14 +42,37 @@ management:
 
 assistant:
   embedding:
-    provider: ${ASSISTANT_EMBEDDING_PROVIDER:local}
+    provider: ${ASSISTANT_EMBEDDING_PROVIDER:tei}
+    request-timeout-ms: ${ASSISTANT_EMBEDDING_REQUEST_TIMEOUT_MS:10000}
+    validate-on-startup: ${ASSISTANT_EMBEDDING_VALIDATE_ON_STARTUP:true}
+    stub:
+      dimensions: ${ASSISTANT_EMBEDDING_STUB_DIMENSIONS:1536}
     openai:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
       url: ${OPENAI_EMBEDDING_URL:https://api.openai.com/v1/embeddings}
+      dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:1536}
+    tei:
+      model: ${ASSISTANT_EMBEDDING_TEI_MODEL:BAAI/bge-small-en-v1.5}
+      url: ${ASSISTANT_EMBEDDING_TEI_URL:http://localhost:8091/v1/embeddings}
+      dimensions: ${ASSISTANT_EMBEDDING_TEI_DIMENSIONS:384}
+    ollama:
+      model: ${ASSISTANT_EMBEDDING_OLLAMA_MODEL:nomic-embed-text}
+      url: ${ASSISTANT_EMBEDDING_OLLAMA_URL:http://localhost:11434/api/embed}
+      dimensions: ${ASSISTANT_EMBEDDING_OLLAMA_DIMENSIONS:768}
   chunking:
-    chunk-size: ${ASSISTANT_CHUNK_SIZE:1000}
-    chunk-overlap: ${ASSISTANT_CHUNK_OVERLAP:200}
+    chunk-size: ${ASSISTANT_CHUNK_SIZE:420}
+    chunk-overlap: ${ASSISTANT_CHUNK_OVERLAP:1}
+  reranker:
+    enabled: ${ASSISTANT_RERANKER_ENABLED:true}
+    provider: ${ASSISTANT_RERANKER_PROVIDER:tei}
+    request-timeout-ms: ${ASSISTANT_RERANKER_REQUEST_TIMEOUT_MS:10000}
+    validate-on-startup: ${ASSISTANT_RERANKER_VALIDATE_ON_STARTUP:true}
+    candidate-limit: ${ASSISTANT_RERANKER_CANDIDATE_LIMIT:12}
+    max-passage-characters: ${ASSISTANT_RERANKER_MAX_PASSAGE_CHARACTERS:1200}
+    tei:
+      model: ${ASSISTANT_RERANKER_TEI_MODEL:BAAI/bge-reranker-base}
+      url: ${ASSISTANT_RERANKER_TEI_URL:http://localhost:8092/rerank}
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
     region: ${S3_REGION:us-east-1}
@@ -67,10 +90,15 @@ ai:
     default-top-k: ${AI_CHAT_DEFAULT_TOP_K:4}
     low-confidence-threshold: ${AI_CHAT_LOW_CONFIDENCE_THRESHOLD:0.55}
   answer:
+    provider: ${AI_ANSWER_PROVIDER:ollama}
+    request-timeout-ms: ${AI_ANSWER_REQUEST_TIMEOUT_MS:20000}
     openai:
       api-key: ${OPENAI_API_KEY:}
       model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
       url: ${OPENAI_CHAT_URL:https://api.openai.com/v1/chat/completions}
+    ollama:
+      model: ${AI_ANSWER_OLLAMA_MODEL:qwen2.5:7b-instruct}
+      url: ${AI_ANSWER_OLLAMA_URL:http://localhost:11434/api/generate}
 
 ticket-service:
   base-url: ${TICKET_SERVICE_BASE_URL:http://localhost:8085}

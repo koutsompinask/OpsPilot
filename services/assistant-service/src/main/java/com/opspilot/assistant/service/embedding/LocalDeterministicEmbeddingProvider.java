@@ -10,7 +10,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class LocalDeterministicEmbeddingProvider implements EmbeddingProvider {
 
-    public static final int DIMENSIONS = 1536;
+    private final EmbeddingProperties properties;
+
+    public LocalDeterministicEmbeddingProvider(EmbeddingProperties properties) {
+        this.properties = properties;
+    }
+
+    @Override
+    public EmbeddingProfile profile() {
+        return new EmbeddingProfile(
+                "stub:deterministic:" + properties.getStub().getDimensions(),
+                "stub",
+                "deterministic",
+                properties.getStub().getDimensions()
+        );
+    }
 
     @Override
     public List<List<Double>> embed(List<String> inputs) {
@@ -23,14 +37,15 @@ public class LocalDeterministicEmbeddingProvider implements EmbeddingProvider {
 
     private List<Double> toVector(String input) {
         byte[] seed = sha256(input == null ? "" : input);
-        List<Double> vector = new ArrayList<>(DIMENSIONS);
+        int dimensions = profile().dimensions();
+        List<Double> vector = new ArrayList<>(dimensions);
 
         long state = 0;
         for (byte b : seed) {
             state = (state << 1) ^ (b & 0xff);
         }
 
-        for (int i = 0; i < DIMENSIONS; i++) {
+        for (int i = 0; i < dimensions; i++) {
             state = (state * 6364136223846793005L + 1442695040888963407L);
             double value = ((state >>> 11) / (double) (1L << 53));
             vector.add((value * 2.0) - 1.0);

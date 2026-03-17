@@ -9,6 +9,7 @@ import com.opspilot.assistant.util.logging.RequestCorrelation;
 import com.opspilot.assistant.repository.DocumentChunkRepository;
 import com.opspilot.assistant.repository.DocumentRepository;
 import com.opspilot.assistant.security.CurrentUser;
+import com.opspilot.assistant.service.embedding.EmbeddingService;
 import com.opspilot.assistant.service.storage.DocumentStorageService;
 import java.util.List;
 import java.util.Locale;
@@ -28,17 +29,20 @@ public class DocumentService {
     private final DocumentChunkRepository documentChunkRepository;
     private final DocumentStorageService documentStorageService;
     private final DocumentIngestionProcessor documentIngestionProcessor;
+    private final EmbeddingService embeddingService;
 
     public DocumentService(
             DocumentRepository documentRepository,
             DocumentChunkRepository documentChunkRepository,
             DocumentStorageService documentStorageService,
-            DocumentIngestionProcessor documentIngestionProcessor
+            DocumentIngestionProcessor documentIngestionProcessor,
+            EmbeddingService embeddingService
     ) {
         this.documentRepository = documentRepository;
         this.documentChunkRepository = documentChunkRepository;
         this.documentStorageService = documentStorageService;
         this.documentIngestionProcessor = documentIngestionProcessor;
+        this.embeddingService = embeddingService;
     }
 
     public DocumentResponse create(CurrentUser currentUser, MultipartFile file, String requestId) {
@@ -56,6 +60,7 @@ public class DocumentService {
                 file.getOriginalFilename(),
                 file.getContentType() == null ? "application/octet-stream" : file.getContentType(),
                 storageKey,
+                embeddingService.profile().id(),
                 normalizedRequestId
         );
         documentRepository.save(document);

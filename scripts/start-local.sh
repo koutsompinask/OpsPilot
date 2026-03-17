@@ -80,6 +80,8 @@ require_port_free "${API_GATEWAY_PORT:-8080}" "api_gateway"
 require_port_free "${AUTH_SERVICE_PORT:-8081}" "auth_service"
 require_port_free "${TENANT_SERVICE_PORT:-8082}" "tenant_service"
 require_port_free "${ASSISTANT_SERVICE_PORT:-8083}" "assistant_service"
+require_port_free "${ASSISTANT_EMBEDDING_TEI_PORT:-8091}" "assistant_embedding_tei"
+require_port_free "${ASSISTANT_RERANKER_TEI_PORT:-8092}" "assistant_reranker_tei"
 require_port_free "${TICKET_SERVICE_PORT:-8085}" "ticket_service"
 require_port_free "${NOTIFICATION_SERVICE_PORT:-8086}" "notification_service"
 
@@ -107,6 +109,22 @@ echo "[info] Starting Docker Compose stack from prebuilt jars..."
 docker compose --env-file "$ENV_FILE" up --build -d --remove-orphans
 
 # Wait until services are actually reachable before announcing success.
+if [[ "${ASSISTANT_EMBEDDING_PROVIDER:-tei}" == "tei" ]]; then
+  wait_http_ok "http://localhost:${ASSISTANT_EMBEDDING_TEI_PORT:-8091}/health" "embedding-service" 180
+fi
+
+if [[ "${ASSISTANT_RERANKER_ENABLED:-true}" == "true" && "${ASSISTANT_RERANKER_PROVIDER:-tei}" == "tei" ]]; then
+  wait_http_ok "http://localhost:${ASSISTANT_RERANKER_TEI_PORT:-8092}/health" "reranker-service" 180
+fi
+
+if [[ "${AI_ANSWER_PROVIDER:-ollama}" == "ollama" || "${AI_ANSWER_PROVIDER:-ollama}" == "local-llm" ]]; then
+  if curl -fsS "http://localhost:11434/api/tags" >/dev/null 2>&1; then
+    echo "[ok] ollama runtime is reachable at http://localhost:11434"
+  else
+    echo "[warn] ollama runtime not reachable at http://localhost:11434; assistant-service will fall back to extractive answers"
+  fi
+fi
+
 wait_http_ok "http://localhost:${TENANT_SERVICE_PORT:-8082}/actuator/health" "tenant-service"
 wait_http_ok "http://localhost:${AUTH_SERVICE_PORT:-8081}/actuator/health" "auth-service"
 wait_http_ok "http://localhost:${ASSISTANT_SERVICE_PORT:-8083}/actuator/health" "assistant-service"
@@ -124,6 +142,9 @@ echo "  api-gateway: http://localhost:${API_GATEWAY_PORT:-8080}"
 echo "  auth:        http://localhost:${AUTH_SERVICE_PORT:-8081}"
 echo "  tenant:      http://localhost:${TENANT_SERVICE_PORT:-8082}"
 echo "  assistant:   http://localhost:${ASSISTANT_SERVICE_PORT:-8083}"
+echo "  embeddings:  http://localhost:${ASSISTANT_EMBEDDING_TEI_PORT:-8091}"
+echo "  reranker:    ${ASSISTANT_RERANKER_PROVIDER:-tei} -> ${ASSISTANT_RERANKER_TEI_URL:-http://localhost:8092/rerank}"
+echo "  answers:     ${AI_ANSWER_PROVIDER:-ollama} -> ${AI_ANSWER_OLLAMA_URL:-http://localhost:11434/api/generate}"
 echo "  tickets:     http://localhost:${TICKET_SERVICE_PORT:-8085}"
 echo "  notify:      http://localhost:${NOTIFICATION_SERVICE_PORT:-8086}"
 echo

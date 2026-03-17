@@ -54,6 +54,7 @@ class DocumentControllerTest {
                 "policy.txt",
                 MediaType.TEXT_PLAIN_VALUE,
                 "tenant/doc/policy.txt",
+                "tei:test:384",
                 "req-123"
         );
         when(currentUserResolver.fromJwt(any())).thenReturn(user);
@@ -87,6 +88,7 @@ class DocumentControllerTest {
                 "faq.md",
                 "text/markdown",
                 "tenant/doc/faq.md",
+                "tei:test:384",
                 "req-list"
         );
         when(currentUserResolver.fromJwt(any())).thenReturn(user);

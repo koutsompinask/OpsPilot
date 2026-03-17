@@ -61,6 +61,7 @@ class DocumentIngestionProcessorTest {
                 "policy.txt",
                 "text/plain",
                 "tenant/document/policy.txt",
+                "stub:deterministic:1536",
                 "req-123"
         );
         when(documentRepository.findById(documentId)).thenReturn(Optional.of(document));

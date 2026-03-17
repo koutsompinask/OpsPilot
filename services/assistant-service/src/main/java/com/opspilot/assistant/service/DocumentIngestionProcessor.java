@@ -1,13 +1,15 @@
 package com.opspilot.assistant.service;
 
 import com.opspilot.assistant.service.chunking.TextChunker;
-import com.opspilot.assistant.service.embedding.EmbeddingService;
+import com.opspilot.assistant.service.chunking.TextChunk;
 import com.opspilot.assistant.domain.entity.Document;
-import com.opspilot.assistant.util.logging.RequestCorrelation;
 import com.opspilot.assistant.service.messaging.DocumentProcessedEventPublisher;
 import com.opspilot.assistant.repository.DocumentChunkRepository;
 import com.opspilot.assistant.repository.DocumentRepository;
+import com.opspilot.assistant.service.embedding.EmbeddingProfile;
+import com.opspilot.assistant.service.embedding.EmbeddingService;
 import com.opspilot.assistant.service.storage.DocumentStorageService;
+import com.opspilot.assistant.util.logging.RequestCorrelation;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -59,14 +61,15 @@ public class DocumentIngestionProcessor {
             log.info("assistant_document_ingestion_started documentId={} tenantId={} requestId={}", documentId, document.getTenantId(), requestId);
 
             String content = documentStorageService.loadText(document.getStorageKey());
-            List<String> chunks = textChunker.chunk(content);
+            List<TextChunk> chunks = textChunker.chunk(content);
             if (chunks.isEmpty()) {
                 throw new IllegalArgumentException("Uploaded document has no text content");
             }
 
-            List<List<Double>> embeddings = embeddingService.provider().embed(chunks);
+            EmbeddingProfile profile = embeddingService.profile();
+            List<List<Double>> embeddings = embeddingService.provider().embed(chunks.stream().map(TextChunk::text).toList());
             documentChunkRepository.replaceForDocument(document.getId(), document.getTenantId(), chunks, embeddings);
-            document.markReady(chunks.size());
+            document.markReady(chunks.size(), profile.id());
             documentRepository.save(document);
 
             try {

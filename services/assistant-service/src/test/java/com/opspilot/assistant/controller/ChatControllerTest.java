@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.opspilot.assistant.domain.entity.Role;
 import com.opspilot.assistant.dto.ChatAskResponse;
+import com.opspilot.assistant.dto.ChatEvidenceResponse;
 import com.opspilot.assistant.dto.ChatSourceResponse;
 import com.opspilot.assistant.exception.GlobalExceptionHandler;
 import com.opspilot.assistant.security.CurrentUser;
@@ -54,8 +55,11 @@ class ChatControllerTest {
         when(currentUserResolver.fromJwt(any())).thenReturn(user);
         when(chatService.ask(eq(user), eq("When is check-in?"), eq(4))).thenReturn(new ChatAskResponse(
                 "Check in starts at 15:00.",
+                "Matched Front Desk Operations in hotel-policy.txt.",
                 0.82,
                 List.of(new ChatSourceResponse("hotel-policy.txt", "chunk-14")),
+                List.of(new ChatEvidenceResponse("hotel-policy.txt", "chunk-14", "Front Desk Operations", "Check in starts at 15:00 local time.", 2.4)),
+                "extractive-grounded",
                 false
         ));
 
@@ -64,9 +68,12 @@ class ChatControllerTest {
                         .content("{\"question\":\"When is check-in?\",\"topK\":4}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").value("Check in starts at 15:00."))
+                .andExpect(jsonPath("$.reasoningSummary").value("Matched Front Desk Operations in hotel-policy.txt."))
                 .andExpect(jsonPath("$.confidence").value(0.82))
                 .andExpect(jsonPath("$.sources[0].document").value("hotel-policy.txt"))
                 .andExpect(jsonPath("$.sources[0].chunkId").value("chunk-14"))
+                .andExpect(jsonPath("$.evidence[0].sectionTitle").value("Front Desk Operations"))
+                .andExpect(jsonPath("$.answerMode").value("extractive-grounded"))
                 .andExpect(jsonPath("$.ticketCreated").value(false));
     }
 }

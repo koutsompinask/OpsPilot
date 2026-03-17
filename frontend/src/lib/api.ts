@@ -70,10 +70,21 @@ export type ChatSourceResponse = {
   chunkId: string;
 };
 
+export type ChatEvidenceResponse = {
+  document: string;
+  chunkId: string;
+  sectionTitle: string;
+  snippet: string;
+  relevanceScore: number;
+};
+
 export type ChatAskResponse = {
   answer: string;
+  reasoningSummary: string;
   confidence: number;
   sources: ChatSourceResponse[];
+  evidence: ChatEvidenceResponse[];
+  answerMode: string;
   ticketCreated: boolean;
 };
 

@@ -7,6 +7,18 @@
 - [ ] No active implementation task in progress
 
 ## Done
+- [x] Replaced assistant-service heuristic reranking with a model-backed TEI reranker stage, keeping the heuristic path only as fallback during reranker outages
+- [x] Added assistant reranker config/startup validation plus Docker Compose and `start-local.sh` wiring for a local TEI reranker sidecar
+- [x] Added reranker-focused tests for provider parsing, fallback behavior, and Harbor Hotel retrieval ordering
+- [x] Verified real reranker integration on 2026-03-17 with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` (`BUILD SUCCESSFUL`), `bash scripts/verify-service-structure.sh` (`[ok] service package structure verification passed for implemented services.`), `bash -n scripts/start-local.sh`, and `docker compose --env-file .env.example config`
+- [x] Reworked assistant-service chunking and retrieval with section-aware chunks, chunk metadata persistence, lexical search, hybrid recall, and reranked evidence selection
+- [x] Replaced plain chunk-style chat answers with structured grounded responses (`answer`, `reasoningSummary`, `evidence`, `answerMode`) and added local Ollama/OpenAI answer-provider fallback to extractive grounding
+- [x] Updated chat frontend, local env/config wiring, and startup reporting for the new assistant response contract and answer-provider settings
+- [x] Verified assistant-service retrieval/answer overhaul on 2026-03-17 with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` (`BUILD SUCCESSFUL`), `npm run build` in `frontend` (`vite build` succeeded), `bash scripts/verify-service-structure.sh` (`[ok] service package structure verification passed for implemented services.`), `bash -n scripts/start-local.sh`, and `docker compose --env-file .env.example config`
+- [x] Replaced assistant-service stub local embeddings with provider-based local runtime support (`tei`, `ollama`, `openai`, `stub`) plus startup dimension validation
+- [x] Added assistant embedding profile persistence, profile-filtered retrieval, and automatic async reprocessing for outdated document embeddings
+- [x] Improved zero-cost local grounded answer generation and wired local TEI sidecar config into `docker-compose.yml`, `.env.example`, and `scripts/start-local.sh`
+- [x] Verified local RAG upgrade on 2026-03-16 with `GRADLE_USER_HOME=/tmp/opspilot-gradle-home /home/kkout/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle --project-cache-dir /tmp/opspilot-gradle-cache :services:assistant-service:test` (`BUILD SUCCESSFUL`), `bash scripts/verify-service-structure.sh` (`[ok] service package structure verification passed for implemented services.`), `bash -n scripts/start-local.sh`, and `docker compose --env-file .env.example config`
 - [x] Refactored implemented backend Dockerfiles to runtime-only images that copy prebuilt `bootJar` artifacts instead of building inside Docker
 - [x] Aligned `docker-compose.yml` and `scripts/start-local.sh` around host-built Gradle jars, Compose-managed runtime containers, orphan cleanup, and host-port preflight checks
 - [x] Updated `README.md` and `plan.md` to document the prebuilt-jar Docker workflow and keep `analytics-service` deferred from the active local stack

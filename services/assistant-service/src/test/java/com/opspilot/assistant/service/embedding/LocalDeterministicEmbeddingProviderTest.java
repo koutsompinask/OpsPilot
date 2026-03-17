@@ -9,7 +9,9 @@ class LocalDeterministicEmbeddingProviderTest {
 
     @Test
     void shouldReturnStable1536DimensionVectors() {
-        LocalDeterministicEmbeddingProvider provider = new LocalDeterministicEmbeddingProvider();
+        EmbeddingProperties properties = new EmbeddingProperties();
+        properties.getStub().setDimensions(1536);
+        LocalDeterministicEmbeddingProvider provider = new LocalDeterministicEmbeddingProvider(properties);
 
         List<List<Double>> first = provider.embed(List.of("hello world"));
         List<List<Double>> second = provider.embed(List.of("hello world"));

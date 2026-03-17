@@ -58,6 +58,40 @@ services:
       timeout: 5s
       retries: 10
 
+  embedding-service:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8.1
+    command:
+      - --model-id
+      - ${ASSISTANT_EMBEDDING_TEI_MODEL:-BAAI/bge-small-en-v1.5}
+      - --port
+      - "80"
+    ports:
+      - "${ASSISTANT_EMBEDDING_TEI_PORT:-8091}:80"
+    volumes:
+      - embedding_cache:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+
+  reranker-service:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8.1
+    command:
+      - --model-id
+      - ${ASSISTANT_RERANKER_TEI_MODEL:-BAAI/bge-reranker-base}
+      - --port
+      - "80"
+    ports:
+      - "${ASSISTANT_RERANKER_TEI_PORT:-8092}:80"
+    volumes:
+      - reranker_cache:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+
   frontend:
     build:
       context: .
@@ -182,10 +216,32 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-knowledge-documents}
       S3_AUTO_CREATE_BUCKET: ${S3_AUTO_CREATE_BUCKET:-true}
-      ASSISTANT_EMBEDDING_PROVIDER: ${ASSISTANT_EMBEDDING_PROVIDER:-local}
+      ASSISTANT_EMBEDDING_PROVIDER: ${ASSISTANT_EMBEDDING_PROVIDER:-tei}
+      ASSISTANT_EMBEDDING_REQUEST_TIMEOUT_MS: ${ASSISTANT_EMBEDDING_REQUEST_TIMEOUT_MS:-10000}
+      ASSISTANT_EMBEDDING_VALIDATE_ON_STARTUP: ${ASSISTANT_EMBEDDING_VALIDATE_ON_STARTUP:-true}
+      ASSISTANT_EMBEDDING_STUB_DIMENSIONS: ${ASSISTANT_EMBEDDING_STUB_DIMENSIONS:-1536}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       OPENAI_EMBEDDING_URL: ${OPENAI_EMBEDDING_URL:-https://api.openai.com/v1/embeddings}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      ASSISTANT_EMBEDDING_TEI_MODEL: ${ASSISTANT_EMBEDDING_TEI_MODEL:-BAAI/bge-small-en-v1.5}
+      ASSISTANT_EMBEDDING_TEI_URL: http://embedding-service:80/v1/embeddings
+      ASSISTANT_EMBEDDING_TEI_DIMENSIONS: ${ASSISTANT_EMBEDDING_TEI_DIMENSIONS:-384}
+      ASSISTANT_EMBEDDING_OLLAMA_MODEL: ${ASSISTANT_EMBEDDING_OLLAMA_MODEL:-nomic-embed-text}
+      ASSISTANT_EMBEDDING_OLLAMA_URL: ${ASSISTANT_EMBEDDING_OLLAMA_URL:-http://host.docker.internal:11434/api/embed}
+      ASSISTANT_EMBEDDING_OLLAMA_DIMENSIONS: ${ASSISTANT_EMBEDDING_OLLAMA_DIMENSIONS:-768}
+      ASSISTANT_RERANKER_ENABLED: ${ASSISTANT_RERANKER_ENABLED:-true}
+      ASSISTANT_RERANKER_PROVIDER: ${ASSISTANT_RERANKER_PROVIDER:-tei}
+      ASSISTANT_RERANKER_REQUEST_TIMEOUT_MS: ${ASSISTANT_RERANKER_REQUEST_TIMEOUT_MS:-10000}
+      ASSISTANT_RERANKER_VALIDATE_ON_STARTUP: ${ASSISTANT_RERANKER_VALIDATE_ON_STARTUP:-true}
+      ASSISTANT_RERANKER_CANDIDATE_LIMIT: ${ASSISTANT_RERANKER_CANDIDATE_LIMIT:-12}
+      ASSISTANT_RERANKER_MAX_PASSAGE_CHARACTERS: ${ASSISTANT_RERANKER_MAX_PASSAGE_CHARACTERS:-1200}
+      ASSISTANT_RERANKER_TEI_MODEL: ${ASSISTANT_RERANKER_TEI_MODEL:-BAAI/bge-reranker-base}
+      ASSISTANT_RERANKER_TEI_URL: http://reranker-service:80/rerank
+      AI_ANSWER_PROVIDER: ${AI_ANSWER_PROVIDER:-ollama}
+      AI_ANSWER_REQUEST_TIMEOUT_MS: ${AI_ANSWER_REQUEST_TIMEOUT_MS:-20000}
+      AI_ANSWER_OLLAMA_MODEL: ${AI_ANSWER_OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      AI_ANSWER_OLLAMA_URL: ${AI_ANSWER_OLLAMA_URL:-http://host.docker.internal:11434/api/generate}
       OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}
       OPENAI_CHAT_URL: ${OPENAI_CHAT_URL:-https://api.openai.com/v1/chat/completions}
       AI_CHAT_DEFAULT_TOP_K: ${AI_CHAT_DEFAULT_TOP_K:-4}
@@ -200,6 +256,10 @@ services:
       rabbitmq:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      embedding-service:
+        condition: service_healthy
+      reranker-service:
         condition: service_healthy
       ticket-service:
         condition: service_healthy
@@ -280,3 +340,5 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  embedding_cache:
+  reranker_cache:

@@ -33,6 +33,9 @@ public class Document {
     @Column(name = "storage_key", nullable = false)
     private String storageKey;
 
+    @Column(name = "embedding_profile", nullable = false)
+    private String embeddingProfile;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private DocumentStatus status;
@@ -59,6 +62,7 @@ public class Document {
             String originalFilename,
             String contentType,
             String storageKey,
+            String embeddingProfile,
             String createdRequestId
     ) {
         Document document = new Document();
@@ -68,6 +72,7 @@ public class Document {
         document.originalFilename = originalFilename;
         document.contentType = contentType;
         document.storageKey = storageKey;
+        document.embeddingProfile = embeddingProfile;
         document.createdRequestId = createdRequestId;
         document.status = DocumentStatus.PROCESSING;
         document.chunkCount = 0;
@@ -86,15 +91,23 @@ public class Document {
         updatedAt = Instant.now();
     }
 
-    public void markReady(int chunkCount) {
+    public void markReady(int chunkCount, String embeddingProfile) {
         this.status = DocumentStatus.READY;
         this.chunkCount = chunkCount;
+        this.embeddingProfile = embeddingProfile;
         this.errorMessage = null;
     }
 
     public void markFailed(String errorMessage) {
         this.status = DocumentStatus.FAILED;
         this.errorMessage = errorMessage;
+    }
+
+    public void markProcessing(String requestId) {
+        this.status = DocumentStatus.PROCESSING;
+        this.chunkCount = 0;
+        this.errorMessage = null;
+        this.createdRequestId = requestId;
     }
 
     public UUID getId() {
@@ -119,6 +132,10 @@ public class Document {
 
     public String getStorageKey() {
         return storageKey;
+    }
+
+    public String getEmbeddingProfile() {
+        return embeddingProfile;
     }
 
     public DocumentStatus getStatus() {

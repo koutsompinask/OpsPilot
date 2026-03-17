@@ -16,7 +16,11 @@ spring:
 
 assistant:
   embedding:
-    provider: local
+    provider: stub
+    validate-on-startup: false
+  reranker:
+    enabled: false
+    validate-on-startup: false
   storage:
     auto-create-bucket: false
   messaging:
@@ -25,3 +29,7 @@ assistant:
 ticket-service:
   base-url: http://localhost:8085
   service-token: test-service-token
+
+ai:
+  answer:
+    provider: extractive

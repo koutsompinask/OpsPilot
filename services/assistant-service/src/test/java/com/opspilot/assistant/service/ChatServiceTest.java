@@ -5,19 +5,20 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.opspilot.assistant.domain.entity.Role;
 import com.opspilot.assistant.dto.ChatAskResponse;
 import com.opspilot.assistant.exception.BadRequestException;
-import com.opspilot.assistant.repository.DocumentChunkSearchRepository;
 import com.opspilot.assistant.repository.RetrievedChunk;
 import com.opspilot.assistant.security.CurrentUser;
 import com.opspilot.assistant.service.answering.AnswerGenerationResult;
 import com.opspilot.assistant.service.answering.AnswerService;
-import com.opspilot.assistant.service.embedding.EmbeddingProvider;
+import com.opspilot.assistant.service.embedding.EmbeddingProfile;
 import com.opspilot.assistant.service.embedding.EmbeddingService;
 import com.opspilot.assistant.service.integration.TicketClient;
+import com.opspilot.assistant.service.retrieval.ChunkRetrievalService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,19 +26,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
 
     @Mock
-    private DocumentChunkSearchRepository repository;
+    private ChunkRetrievalService chunkRetrievalService;
 
     @Mock
     private EmbeddingService embeddingService;
 
     @Mock
-    private EmbeddingProvider embeddingProvider;
+    private DocumentEmbeddingMaintenanceService documentEmbeddingMaintenanceService;
 
     @Mock
     private AnswerService answerService;
@@ -50,35 +50,52 @@ class ChatServiceTest {
 
     @BeforeEach
     void setUp() {
-        chatService = new ChatService(repository, embeddingService, answerService, ticketClient, 4, 0.55);
+        chatService = new ChatService(chunkRetrievalService, documentEmbeddingMaintenanceService, embeddingService, answerService, ticketClient, 4, 0.55);
         user = new CurrentUser(UUID.randomUUID(), UUID.randomUUID(), "user@example.com", Role.TENANT_MEMBER);
 
-        lenient().when(embeddingService.provider()).thenReturn(embeddingProvider);
-        lenient().when(embeddingProvider.embed(any())).thenReturn(List.of(List.of(0.1, 0.2, 0.3)));
+        lenient().when(documentEmbeddingMaintenanceService.ensureCurrentProfile(any(), any()))
+                .thenReturn(new EmbeddingIndexRefreshResult(0, 1));
+        lenient().when(embeddingService.profile()).thenReturn(new EmbeddingProfile("tei:test:384", "tei", "test", 384));
     }
 
     @Test
-    void askShouldReturnCitationsAndComputedConfidence() {
+    void askShouldReturnEvidenceAndComputedConfidence() {
         List<RetrievedChunk> chunks = List.of(
-                new RetrievedChunk(UUID.randomUUID(), "policy.txt", 2, "Check in at 15:00", 0.20),
-                new RetrievedChunk(UUID.randomUUID(), "policy.txt", 5, "Breakfast starts at 07:00", 0.40)
+                new RetrievedChunk(UUID.randomUUID(), "policy.txt", 2, "Front Desk Operations", "paragraph",
+                        "Check-in time starts at 15:00 local time. Check-out time is 11:00 local time.",
+                        0.12, 0.87, 0.032, 0.92),
+                new RetrievedChunk(UUID.randomUUID(), "policy.txt", 5, "Breakfast", "paragraph",
+                        "Breakfast starts at 07:00.", 0.35, 0.44, 0.016, 0.41)
         );
-        when(repository.searchTopChunks(eq(user.tenantId()), any(), eq(2))).thenReturn(chunks);
-        when(answerService.generate(any(), eq(chunks))).thenReturn(new AnswerGenerationResult("Answer", "local"));
+        when(chunkRetrievalService.retrieve(eq(user.tenantId()), eq("What are check-in rules?"), eq(2))).thenReturn(chunks);
+        when(answerService.generate(any(), eq(chunks))).thenReturn(new AnswerGenerationResult(
+                "Check-in starts at 15:00 and check-out is 11:00 local time.",
+                "Matched Front Desk Operations in policy.txt.",
+                "extractive",
+                "extractive-grounded"
+        ));
 
         ChatAskResponse response = chatService.ask(user, "What are check-in rules?", 2);
 
-        assertEquals("Answer", response.answer());
-        assertEquals(0.85, response.confidence());
+        assertEquals("Check-in starts at 15:00 and check-out is 11:00 local time.", response.answer());
+        assertEquals("Matched Front Desk Operations in policy.txt.", response.reasoningSummary());
+        assertEquals(0.665, response.confidence());
         assertEquals(2, response.sources().size());
-        assertEquals("chunk-2", response.sources().get(0).chunkId());
+        assertEquals(2, response.evidence().size());
+        assertEquals("Front Desk Operations", response.evidence().getFirst().sectionTitle());
+        assertEquals("extractive-grounded", response.answerMode());
         assertFalse(response.ticketCreated());
     }
 
     @Test
     void askShouldReturnZeroConfidenceWhenNoChunks() {
-        when(repository.searchTopChunks(eq(user.tenantId()), any(), eq(4))).thenReturn(List.of());
-        when(answerService.generate(any(), eq(List.of()))).thenReturn(new AnswerGenerationResult("No context", "local"));
+        when(chunkRetrievalService.retrieve(eq(user.tenantId()), eq("Unknown"), eq(4))).thenReturn(List.of());
+        when(answerService.generate(any(), eq(List.of()))).thenReturn(new AnswerGenerationResult(
+                "No context",
+                "No evidence",
+                "extractive",
+                "insufficient-evidence"
+        ));
 
         ChatAskResponse response = chatService.ask(user, "Unknown", null);
 
@@ -89,8 +106,13 @@ class ChatServiceTest {
 
     @Test
     void askShouldKeepResponseWhenTicketCreateFails() {
-        when(repository.searchTopChunks(eq(user.tenantId()), any(), eq(4))).thenReturn(List.of());
-        when(answerService.generate(any(), eq(List.of()))).thenReturn(new AnswerGenerationResult("No context", "local"));
+        when(chunkRetrievalService.retrieve(eq(user.tenantId()), eq("Unknown"), eq(4))).thenReturn(List.of());
+        when(answerService.generate(any(), eq(List.of()))).thenReturn(new AnswerGenerationResult(
+                "No context",
+                "No evidence",
+                "extractive",
+                "insufficient-evidence"
+        ));
         org.mockito.Mockito.doThrow(new IllegalStateException("boom")).when(ticketClient).createTicket(any());
 
         ChatAskResponse response = chatService.ask(user, "Unknown", null);
@@ -103,5 +125,21 @@ class ChatServiceTest {
     void askShouldRejectOutOfRangeTopK() {
         assertThrows(BadRequestException.class, () -> chatService.ask(user, "Question", 0));
         assertThrows(BadRequestException.class, () -> chatService.ask(user, "Question", 11));
+    }
+
+    @Test
+    void askShouldReturnReindexMessageWhenNoActiveProfileDocumentsAreReady() {
+        when(documentEmbeddingMaintenanceService.ensureCurrentProfile(any(), any()))
+                .thenReturn(new EmbeddingIndexRefreshResult(2, 0));
+        when(chunkRetrievalService.retrieve(eq(user.tenantId()), eq("Unknown"), eq(4))).thenReturn(List.of());
+
+        ChatAskResponse response = chatService.ask(user, "Unknown", null);
+
+        assertEquals(
+                "Your knowledge base is being re-indexed for the active embedding model. Please retry in a moment.",
+                response.answer()
+        );
+        assertEquals(0.0, response.confidence());
+        assertFalse(response.ticketCreated());
     }
 }

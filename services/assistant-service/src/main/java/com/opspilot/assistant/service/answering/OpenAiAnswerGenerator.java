@@ -3,8 +3,7 @@ package com.opspilot.assistant.service.answering;
 import com.opspilot.assistant.repository.RetrievedChunk;
 import com.opspilot.assistant.util.logging.RequestCorrelation;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,23 +15,15 @@ import org.springframework.web.client.RestTemplate;
 public class OpenAiAnswerGenerator implements AnswerGenerator {
 
     private final RestTemplate restTemplate;
-    private final String apiKey;
-    private final String model;
-    private final String url;
+    private final AnswerProperties properties;
 
-    public OpenAiAnswerGenerator(
-            RestTemplateBuilder restTemplateBuilder,
-            @Value("${ai.answer.openai.api-key:}") String apiKey,
-            @Value("${ai.answer.openai.model:gpt-4o-mini}") String model,
-            @Value("${ai.answer.openai.url:https://api.openai.com/v1/chat/completions}") String url
-    ) {
-        this.restTemplate = restTemplateBuilder.build();
-        this.apiKey = apiKey;
-        this.model = model;
-        this.url = url;
+    public OpenAiAnswerGenerator(@Qualifier("answerRestTemplate") RestTemplate answerRestTemplate, AnswerProperties properties) {
+        this.restTemplate = answerRestTemplate;
+        this.properties = properties;
     }
 
     public boolean isConfigured() {
+        String apiKey = properties.getOpenai().getApiKey();
         return apiKey != null && !apiKey.isBlank();
     }
 
@@ -43,29 +34,42 @@ public class OpenAiAnswerGenerator implements AnswerGenerator {
         }
 
         String context = chunks.stream()
-                .map(chunk -> "[chunk-" + chunk.chunkIndex() + "] " + chunk.documentName() + ": " + chunk.chunkText())
+                .map(chunk -> "[chunk-" + chunk.chunkIndex() + "] "
+                        + chunk.documentName()
+                        + " / "
+                        + chunk.sectionTitle()
+                        + ": "
+                        + chunk.chunkText())
                 .reduce((left, right) -> left + "\n\n" + right)
                 .orElse("");
 
-        String userPrompt = "Question:\n" + question + "\n\nContext:\n" + context
-                + "\n\nAnswer using only the context. If insufficient context, say so briefly.";
+        String userPrompt = """
+                Question:
+                %s
+
+                Evidence:
+                %s
+
+                Return JSON with keys "answer" and "reasoningSummary".
+                Use only the evidence. If evidence is insufficient, say that briefly in both fields.
+                """.formatted(question, context);
 
         ChatCompletionRequest request = new ChatCompletionRequest(
-                model,
+                properties.getOpenai().getModel(),
                 List.of(
-                        new ChatMessage("system", "You are OpsPilot assistant. Give concise grounded answers."),
+                        new ChatMessage("system", "You are OpsPilot assistant. Provide concise grounded answers in JSON."),
                         new ChatMessage("user", userPrompt)
                 ),
-                0.2
+                0.1
         );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
+        headers.setBearerAuth(properties.getOpenai().getApiKey());
         headers.set(RequestCorrelation.HEADER_NAME, RequestCorrelation.currentRequestId());
 
         ResponseEntity<ChatCompletionResponse> response = restTemplate.postForEntity(
-                url,
+                properties.getOpenai().getUrl(),
                 new HttpEntity<>(request, headers),
                 ChatCompletionResponse.class
         );
@@ -75,12 +79,34 @@ public class OpenAiAnswerGenerator implements AnswerGenerator {
             throw new IllegalStateException("Unexpected chat response from OpenAI");
         }
 
-        String content = body.choices().get(0).message() == null ? null : body.choices().get(0).message().content();
+        String content = body.choices().getFirst().message() == null ? null : body.choices().getFirst().message().content();
         if (content == null || content.isBlank()) {
             throw new IllegalStateException("OpenAI chat response did not include answer content");
         }
 
-        return new AnswerGenerationResult(content.trim(), "openai");
+        String answer = extractJsonField(content, "answer");
+        String reasoningSummary = extractJsonField(content, "reasoningSummary");
+        return new AnswerGenerationResult(
+                answer == null ? content.trim() : answer,
+                reasoningSummary == null ? "Generated from grounded evidence returned by the chat model." : reasoningSummary,
+                "openai",
+                "llm-grounded"
+        );
+    }
+
+    private String extractJsonField(String content, String field) {
+        String marker = "\"" + field + "\"";
+        int start = content.indexOf(marker);
+        if (start < 0) {
+            return null;
+        }
+        int colon = content.indexOf(':', start);
+        int firstQuote = content.indexOf('"', colon + 1);
+        int secondQuote = content.indexOf('"', firstQuote + 1);
+        if (colon < 0 || firstQuote < 0 || secondQuote < 0) {
+            return null;
+        }
+        return content.substring(firstQuote + 1, secondQuote).trim();
     }
 
     private record ChatCompletionRequest(String model, List<ChatMessage> messages, double temperature) {

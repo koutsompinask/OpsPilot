@@ -36,6 +36,17 @@ const suggestions = [
   "What should support do when no source is found?",
 ];
 
+function answerModeLabel(answerMode: string): string {
+  switch (answerMode) {
+    case "llm-grounded":
+      return "Grounded synthesis";
+    case "insufficient-evidence":
+      return "Insufficient evidence";
+    default:
+      return "Extractive grounded";
+  }
+}
+
 export function ChatPage() {
   const [question, setQuestion] = useState("");
   const [topK, setTopK] = useState(4);
@@ -139,6 +150,7 @@ export function ChatPage() {
                     <Badge variant={confidenceVariant(message.payload.confidence)}>
                       Confidence {message.payload.confidence.toFixed(3)}
                     </Badge>
+                    <Badge variant="neutral">{answerModeLabel(message.payload.answerMode)}</Badge>
                     {message.payload.ticketCreated ? <Badge variant="info">Ticket created</Badge> : null}
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-sky-700/40">
@@ -155,6 +167,11 @@ export function ChatPage() {
                   </p>
                 ) : null}
 
+                <div className="mt-4 rounded-2xl border border-border bg-surface-elevated/70 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Why this answer</p>
+                  <p className="mt-2 text-sm leading-6 text-foreground">{message.payload.reasoningSummary}</p>
+                </div>
+
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">Sources</p>
                   {message.payload.sources.length === 0 ? (
@@ -168,6 +185,30 @@ export function ChatPage() {
                         >
                           {source.document} · {source.chunkId}
                         </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Evidence</p>
+                  {message.payload.evidence.length === 0 ? (
+                    <p className="mt-2 text-xs text-muted">No grounded evidence returned.</p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {message.payload.evidence.map((item, index) => (
+                        <div
+                          key={`${item.document}-${item.chunkId}-${index}`}
+                          className="rounded-2xl border border-border bg-surface-elevated px-3 py-3"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="neutral">{item.sectionTitle}</Badge>
+                            <span className="text-xs text-muted">
+                              {item.document} · {item.chunkId} · score {item.relevanceScore.toFixed(3)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-foreground">{item.snippet}</p>
+                        </div>
                       ))}
                     </div>
                   )}
