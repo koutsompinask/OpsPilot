@@ -88,6 +88,61 @@ export type ChatAskResponse = {
   ticketCreated: boolean;
 };
 
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeChatSources(value: unknown): ChatSourceResponse[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => {
+    const source = item as Partial<ChatSourceResponse> | null;
+    return {
+      document: asString(source?.document, "Unknown document"),
+      chunkId: asString(source?.chunkId, "chunk-unknown"),
+    };
+  });
+}
+
+function normalizeChatEvidence(value: unknown): ChatEvidenceResponse[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => {
+    const evidence = item as Partial<ChatEvidenceResponse> | null;
+    return {
+      document: asString(evidence?.document, "Unknown document"),
+      chunkId: asString(evidence?.chunkId, "chunk-unknown"),
+      sectionTitle: asString(evidence?.sectionTitle, "General"),
+      snippet: asString(evidence?.snippet),
+      relevanceScore: asNumber(evidence?.relevanceScore),
+    };
+  });
+}
+
+function normalizeChatAskResponse(value: unknown): ChatAskResponse {
+  const response = (value ?? {}) as Partial<ChatAskResponse>;
+  return {
+    answer: asString(response.answer, "No answer was returned."),
+    reasoningSummary: asString(
+      response.reasoningSummary,
+      "The assistant did not return a reasoning summary for this response.",
+    ),
+    confidence: asNumber(response.confidence),
+    sources: normalizeChatSources(response.sources),
+    evidence: normalizeChatEvidence(response.evidence),
+    answerMode: asString(response.answerMode, "extractive-grounded"),
+    ticketCreated: response.ticketCreated === true,
+  };
+}
+
 export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
 
 export type TicketOrigin = "CHAT_LOW_CONFIDENCE" | "MANUAL";
@@ -260,10 +315,11 @@ export async function deleteDocument(documentId: string): Promise<void> {
 }
 
 export async function askChat(payload: ChatAskRequest): Promise<ChatAskResponse> {
-  return requestJson<ChatAskResponse>("/chat/ask", {
+  const response = await requestJson<unknown>("/chat/ask", {
     method: "POST",
     body: JSON.stringify(payload),
   }, { auth: true });
+  return normalizeChatAskResponse(response);
 }
 
 export async function listTickets(): Promise<TicketResponse[]> {

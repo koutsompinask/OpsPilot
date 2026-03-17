@@ -120,16 +120,23 @@ export function ChatPage() {
             );
           }
 
-          const lowConfidence = message.payload.confidence < 0.55;
+          const answer = message.payload.answer ?? "No answer was returned.";
+          const confidence = Number.isFinite(message.payload.confidence) ? message.payload.confidence : 0;
+          const answerMode = message.payload.answerMode ?? "extractive-grounded";
+          const reasoningSummary =
+            message.payload.reasoningSummary ?? "The assistant did not return a reasoning summary for this response.";
+          const sources = Array.isArray(message.payload.sources) ? message.payload.sources : [];
+          const evidence = Array.isArray(message.payload.evidence) ? message.payload.evidence : [];
+          const lowConfidence = confidence < 0.55;
           return (
             <div key={message.id} className="flex justify-start">
               <div className="card-enter max-w-[95%] rounded-2xl rounded-bl-md border border-border bg-surface p-4 shadow-soft md:max-w-[80%]">
                 <p className="chat-answer-enter text-sm leading-6 text-foreground">
                   {typedAssistantIds.has(message.id) ? (
-                    <span className="whitespace-pre-wrap">{message.payload.answer}</span>
+                    <span className="whitespace-pre-wrap">{answer}</span>
                   ) : (
                     <TypingText
-                      text={message.payload.answer}
+                      text={answer}
                       speedMs={14}
                       onComplete={() => {
                         setTypedAssistantIds((current) => {
@@ -147,16 +154,16 @@ export function ChatPage() {
 
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Badge variant={confidenceVariant(message.payload.confidence)}>
-                      Confidence {message.payload.confidence.toFixed(3)}
+                    <Badge variant={confidenceVariant(confidence)}>
+                      Confidence {confidence.toFixed(3)}
                     </Badge>
-                    <Badge variant="neutral">{answerModeLabel(message.payload.answerMode)}</Badge>
+                    <Badge variant="neutral">{answerModeLabel(answerMode)}</Badge>
                     {message.payload.ticketCreated ? <Badge variant="info">Ticket created</Badge> : null}
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-sky-700/40">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-sky-400 to-amber-400"
-                      style={{ width: `${Math.max(6, Math.min(100, message.payload.confidence * 100))}%` }}
+                      style={{ width: `${Math.max(6, Math.min(100, confidence * 100))}%` }}
                     />
                   </div>
                 </div>
@@ -169,16 +176,16 @@ export function ChatPage() {
 
                 <div className="mt-4 rounded-2xl border border-border bg-surface-elevated/70 p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">Why this answer</p>
-                  <p className="mt-2 text-sm leading-6 text-foreground">{message.payload.reasoningSummary}</p>
+                  <p className="mt-2 text-sm leading-6 text-foreground">{reasoningSummary}</p>
                 </div>
 
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">Sources</p>
-                  {message.payload.sources.length === 0 ? (
+                  {sources.length === 0 ? (
                     <p className="mt-2 text-xs text-muted">No sources returned.</p>
                   ) : (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {message.payload.sources.map((source, index) => (
+                      {sources.map((source, index) => (
                         <span
                           key={`${source.document}-${source.chunkId}-${index}`}
                           className="rounded-full border border-border bg-surface-elevated px-2.5 py-1 text-xs text-muted"
@@ -192,11 +199,11 @@ export function ChatPage() {
 
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">Evidence</p>
-                  {message.payload.evidence.length === 0 ? (
+                  {evidence.length === 0 ? (
                     <p className="mt-2 text-xs text-muted">No grounded evidence returned.</p>
                   ) : (
                     <div className="mt-2 space-y-2">
-                      {message.payload.evidence.map((item, index) => (
+                      {evidence.map((item, index) => (
                         <div
                           key={`${item.document}-${item.chunkId}-${index}`}
                           className="rounded-2xl border border-border bg-surface-elevated px-3 py-3"
