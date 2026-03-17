@@ -4,9 +4,13 @@
 - [ ] Implement `analytics-service` in a later dedicated analytics phase; keep it out of active local infrastructure until then
 
 ## To-Do
-- [ ] No active implementation task in progress
+- [ ] Diagnose frontend chat crash caused by missing chat response fields
+- [ ] Normalize chat API responses and harden `ChatPage` rendering against undefined arrays
+- [ ] Verify the frontend build and record evidence for the fix
 
 ## Done
+- [x] Made `frontend/src/pages/DocumentsPage.tsx` drag-and-drop functional and added multi-document selection/upload support using sequential requests over the existing single-file API
+- [x] Verified Documents page upload changes on 2026-03-17 with `npm run build` in `frontend` (`tsc -b && vite build` succeeded)
 - [x] Replaced assistant-service heuristic reranking with a model-backed TEI reranker stage, keeping the heuristic path only as fallback during reranker outages
 - [x] Added assistant reranker config/startup validation plus Docker Compose and `start-local.sh` wiring for a local TEI reranker sidecar
 - [x] Added reranker-focused tests for provider parsing, fallback behavior, and Harbor Hotel retrieval ordering

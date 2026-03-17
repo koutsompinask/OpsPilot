@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -32,9 +32,10 @@ export function DocumentsPage() {
   const claims = getAuthClaims();
   const isAdmin = claims?.role === "TENANT_ADMIN";
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedDetails, setSelectedDetails] = useState<DocumentResponse | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
@@ -70,10 +71,96 @@ export function DocumentsPage() {
     };
   }, [documents]);
 
+  const selectedFileSummary = useMemo(() => {
+    if (selectedFiles.length === 0) {
+      return "No files selected";
+    }
+    if (selectedFiles.length === 1) {
+      return selectedFiles[0].name;
+    }
+    return `${selectedFiles.length} files selected`;
+  }, [selectedFiles]);
+
+  const mergeFiles = useCallback((incomingFiles: FileList | File[]) => {
+    const normalizedFiles = Array.from(incomingFiles).filter((file) => {
+      const name = file.name.toLowerCase();
+      return name.endsWith(".txt") || name.endsWith(".md");
+    });
+
+    setSelectedFiles((currentFiles) => {
+      const filesByKey = new Map(currentFiles.map((file) => [`${file.name}:${file.size}:${file.lastModified}`, file]));
+
+      normalizedFiles.forEach((file) => {
+        filesByKey.set(`${file.name}:${file.size}:${file.lastModified}`, file);
+      });
+
+      return Array.from(filesByKey.values());
+    });
+
+    return normalizedFiles.length;
+  }, []);
+
+  function onFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const acceptedCount = mergeFiles(files);
+    if (acceptedCount === 0) {
+      setError("Only .txt and .md files are supported.");
+    } else {
+      setError(null);
+    }
+
+    event.target.value = "";
+  }
+
+  function onDragOver(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDraggingOver(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDraggingOver(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDraggingOver(false);
+
+    const files = event.dataTransfer.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const acceptedCount = mergeFiles(files);
+    if (acceptedCount === 0) {
+      setError("Only .txt and .md files are supported.");
+      return;
+    }
+
+    setError(null);
+  }
+
+  function removeSelectedFile(fileToRemove: File) {
+    setSelectedFiles((currentFiles) =>
+      currentFiles.filter(
+        (file) =>
+          !(
+            file.name === fileToRemove.name &&
+            file.size === fileToRemove.size &&
+            file.lastModified === fileToRemove.lastModified
+          ),
+      ),
+    );
+  }
+
   async function onUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedFile) {
-      setError("Select a .txt or .md file first.");
+    if (selectedFiles.length === 0) {
+      setError("Select one or more .txt or .md files first.");
       return;
     }
 
@@ -82,9 +169,33 @@ export function DocumentsPage() {
     setIsUploading(true);
 
     try {
-      const created = await uploadDocument(selectedFile);
-      setSelectedFile(null);
-      setSuccess(`Upload accepted for ${created.filename}. Status: ${created.status}.`);
+      const uploadedFiles: string[] = [];
+      const failedFiles: string[] = [];
+
+      for (const file of selectedFiles) {
+        try {
+          const created = await uploadDocument(file);
+          uploadedFiles.push(created.filename);
+        } catch {
+          failedFiles.push(file.name);
+        }
+      }
+
+      if (uploadedFiles.length === 0) {
+        throw new Error(failedFiles.length === 1 ? `Unable to upload ${failedFiles[0]}.` : "Unable to upload the selected documents.");
+      }
+
+      setSelectedFiles([]);
+      if (failedFiles.length === 0) {
+        setSuccess(
+          uploadedFiles.length === 1
+            ? `Upload accepted for ${uploadedFiles[0]}.`
+            : `Upload accepted for ${uploadedFiles.length} documents.`,
+        );
+      } else {
+        setSuccess(`Upload accepted for ${uploadedFiles.length} documents. Failed: ${failedFiles.join(", ")}.`);
+      }
+
       await loadDocuments();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to upload document.";
@@ -181,21 +292,45 @@ export function DocumentsPage() {
           <form className="mt-4" onSubmit={onUpload}>
             <label
               htmlFor="document-file"
-              className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-4 py-8 text-center transition-colors hover:border-amber-400"
+              onDragOver={onDragOver}
+              onDragEnter={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed bg-surface px-4 py-8 text-center transition-colors ${
+                isDraggingOver ? "border-amber-400 bg-surface-elevated" : "border-border hover:border-amber-400"
+              }`}
             >
-              <span className="text-sm font-medium text-foreground">Drop file here or click to browse</span>
-              <span className="mt-1 text-xs text-muted">{selectedFile ? selectedFile.name : "No file selected"}</span>
+              <span className="text-sm font-medium text-foreground">Drop files here or click to browse</span>
+              <span className="mt-1 text-xs text-muted">{selectedFileSummary}</span>
             </label>
             <input
               id="document-file"
               type="file"
               accept=".txt,.md,text/plain,text/markdown"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              multiple
+              onChange={onFileSelection}
               className="sr-only"
             />
+            {selectedFiles.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {selectedFiles.map((file) => {
+                  const fileKey = `${file.name}:${file.size}:${file.lastModified}`;
+                  return (
+                    <button
+                      key={fileKey}
+                      type="button"
+                      onClick={() => removeSelectedFile(file)}
+                      className="rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs text-foreground transition-colors hover:border-rose-400 hover:text-rose-300"
+                    >
+                      {file.name} x
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
             <div className="mt-4 flex justify-end">
-              <Button type="submit" disabled={isUploading || !selectedFile}>
-                {isUploading ? "Uploading..." : "Upload"}
+              <Button type="submit" disabled={isUploading || selectedFiles.length === 0}>
+                {isUploading ? "Uploading..." : selectedFiles.length > 1 ? "Upload documents" : "Upload document"}
               </Button>
             </div>
           </form>
