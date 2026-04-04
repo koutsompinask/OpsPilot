@@ -27,6 +27,10 @@ public class WebhookProperties {
     private int connectTimeoutMs = 2000;
     // 5 s: allow the remote handler a little time to process and acknowledge the body
     private int readTimeoutMs = 5000;
+    // Number of additional attempts after the first failure before giving up; 0 means no retries
+    private int maxRetries = 3;
+    // Initial delay before the first retry (ms); doubles on each subsequent attempt (exponential backoff)
+    private long retryInitialDelayMs = 1000;
 
     public boolean isEnabled() {
         return enabled;
@@ -74,5 +78,21 @@ public class WebhookProperties {
 
     public void setReadTimeoutMs(int readTimeoutMs) {
         this.readTimeoutMs = readTimeoutMs;
+    }
+
+    public int getMaxRetries() {
+        return maxRetries;
+    }
+
+    public void setMaxRetries(int maxRetries) {
+        this.maxRetries = maxRetries;
+    }
+
+    public long getRetryInitialDelayMs() {
+        return retryInitialDelayMs;
+    }
+
+    public void setRetryInitialDelayMs(long retryInitialDelayMs) {
+        this.retryInitialDelayMs = retryInitialDelayMs;
     }
 }
