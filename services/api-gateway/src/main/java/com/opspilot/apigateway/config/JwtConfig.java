@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 
@@ -36,12 +37,18 @@ public class JwtConfig {
      *         resource server filter chain
      */
     @Bean
-    public ReactiveJwtDecoder jwtDecoder(@Value("${gateway.jwt.secret}") String secret) {
+    public ReactiveJwtDecoder jwtDecoder(
+            @Value("${gateway.jwt.secret}") String secret,
+            @Value("${gateway.jwt.issuer}") String issuer) {
         // Derive the HMAC key from the raw UTF-8 bytes of the shared secret string
         SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusReactiveJwtDecoder.withSecretKey(key)
+        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withSecretKey(key)
                 // Explicitly pin the algorithm to HS256; reject tokens signed with anything else
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+        // Validate the issuer claim to ensure tokens were issued by auth-service,
+        // preventing token substitution from other sources using the same shared secret
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuer));
+        return decoder;
     }
 }

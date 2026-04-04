@@ -21,6 +21,7 @@ spring:
       resourceserver:
         jwt:
           secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
+          issuer: ${JWT_ISSUER:opspilot-auth-service}
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
