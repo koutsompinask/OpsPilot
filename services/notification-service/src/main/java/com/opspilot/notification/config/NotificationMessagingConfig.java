@@ -3,7 +3,9 @@ package com.opspilot.notification.config;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,8 +18,12 @@ import org.springframework.amqp.rabbit.annotation.EnableRabbit;
  * <p>Declares the shared {@code opspilot.events} direct exchange together with two durable,
  * service-owned queues — one per consumed event type. Each queue is bound to the exchange with
  * its own routing key so that messages published by other services are routed exclusively to
- * the correct queue. Using separate queues per event type keeps consumer throughput independent
- * and makes it straightforward to apply per-queue dead-lettering in the future.</p>
+ * the correct queue. Using separate queues per event type keeps consumer throughput independent.</p>
+ *
+ * <p>Dead-letter exchange (DLX): each main queue is configured with {@code x-dead-letter-exchange}
+ * pointing to a fanout DLX ({@code opspilot.events.dlx}). Messages that are rejected, expired,
+ * or overflow the queue are routed to the DLX and land in dedicated DLQs for operator inspection
+ * rather than being silently dropped.</p>
  *
  * <p>All beans are idempotent: RabbitMQ will verify that the declared exchange and queues
  * already exist with matching arguments and leave them unchanged if they do.</p>
@@ -54,27 +60,100 @@ public class NotificationMessagingConfig {
     }
 
     /**
+     * Declares the dead-letter exchange (DLX) that receives undeliverable messages from the main queues.
+     *
+     * <p>A fanout exchange is used so that all dead-lettered messages are routed to every bound DLQ
+     * without requiring a specific routing key. This simplifies the DLX topology.</p>
+     *
+     * @param properties messaging configuration holding the DLX name
+     * @return a durable {@link FanoutExchange} used as the dead-letter destination
+     */
+    @Bean
+    public FanoutExchange deadLetterExchange(MessagingProperties properties) {
+        return new FanoutExchange(properties.getDeadLetterExchange(), true, false);
+    }
+
+    /**
+     * Declares the dead-letter queue for {@code ticket.created} events.
+     *
+     * <p>Messages rejected or expired from the main ticket-created queue land here for
+     * operator inspection and manual replay.</p>
+     *
+     * @param properties messaging configuration holding the DLQ name
+     * @return a durable DLQ bound via the DLX
+     */
+    @Bean
+    public Queue ticketCreatedDlq(MessagingProperties properties) {
+        return QueueBuilder.durable(properties.getTicketCreatedDlq()).build();
+    }
+
+    /**
+     * Declares the dead-letter queue for {@code document.processed} events.
+     *
+     * @param properties messaging configuration holding the DLQ name
+     * @return a durable DLQ bound via the DLX
+     */
+    @Bean
+    public Queue documentProcessedDlq(MessagingProperties properties) {
+        return QueueBuilder.durable(properties.getDocumentProcessedDlq()).build();
+    }
+
+    /**
+     * Binds the ticket-created DLQ to the dead-letter exchange.
+     *
+     * @param ticketCreatedDlq    the DLQ declared by {@link #ticketCreatedDlq}
+     * @param deadLetterExchange  the DLX declared by {@link #deadLetterExchange}
+     * @return the fanout binding
+     */
+    @Bean
+    public Binding ticketCreatedDlqBinding(Queue ticketCreatedDlq, FanoutExchange deadLetterExchange) {
+        return BindingBuilder.bind(ticketCreatedDlq).to(deadLetterExchange);
+    }
+
+    /**
+     * Binds the document-processed DLQ to the dead-letter exchange.
+     *
+     * @param documentProcessedDlq the DLQ declared by {@link #documentProcessedDlq}
+     * @param deadLetterExchange   the DLX declared by {@link #deadLetterExchange}
+     * @return the fanout binding
+     */
+    @Bean
+    public Binding documentProcessedDlqBinding(Queue documentProcessedDlq, FanoutExchange deadLetterExchange) {
+        return BindingBuilder.bind(documentProcessedDlq).to(deadLetterExchange);
+    }
+
+    /**
      * Declares the durable queue that receives {@code ticket.created} events.
      *
-     * @param properties messaging configuration holding the queue name
-     * @return a durable {@link Queue} dedicated to ticket-created notifications
+     * <p>The queue is configured with {@code x-dead-letter-exchange} so that rejected or
+     * expired messages are automatically routed to the DLX instead of being silently dropped.</p>
+     *
+     * @param properties messaging configuration holding the queue and DLX names
+     * @return a durable {@link Queue} with dead-letter routing configured
      */
     @Bean
     public Queue ticketCreatedQueue(MessagingProperties properties) {
-        // Durable queue so messages survive a broker restart
-        return new Queue(properties.getTicketCreatedQueue(), true);
+        return QueueBuilder.durable(properties.getTicketCreatedQueue())
+                // Route rejected/expired messages to the DLX rather than dropping them silently
+                .withArgument("x-dead-letter-exchange", properties.getDeadLetterExchange())
+                .build();
     }
 
     /**
      * Declares the durable queue that receives {@code document.processed} events.
      *
-     * @param properties messaging configuration holding the queue name
-     * @return a durable {@link Queue} dedicated to document-processed notifications
+     * <p>The queue is configured with {@code x-dead-letter-exchange} so that rejected or
+     * expired messages are automatically routed to the DLX instead of being silently dropped.</p>
+     *
+     * @param properties messaging configuration holding the queue and DLX names
+     * @return a durable {@link Queue} with dead-letter routing configured
      */
     @Bean
     public Queue documentProcessedQueue(MessagingProperties properties) {
-        // Durable queue so messages survive a broker restart
-        return new Queue(properties.getDocumentProcessedQueue(), true);
+        return QueueBuilder.durable(properties.getDocumentProcessedQueue())
+                // Route rejected/expired messages to the DLX rather than dropping them silently
+                .withArgument("x-dead-letter-exchange", properties.getDeadLetterExchange())
+                .build();
     }
 
     /**

@@ -22,6 +22,10 @@ public class MessagingProperties {
     private String documentProcessedRoutingKey = "document.processed";
     private String ticketCreatedQueue = "notification.ticket.created";
     private String documentProcessedQueue = "notification.document.processed";
+    // Dead-letter exchange: undeliverable or failed messages are routed here instead of being lost
+    private String deadLetterExchange = "opspilot.events.dlx";
+    private String ticketCreatedDlq = "notification.ticket.created.dlq";
+    private String documentProcessedDlq = "notification.document.processed.dlq";
 
     public boolean isEnabled() {
         return enabled;
@@ -69,5 +73,29 @@ public class MessagingProperties {
 
     public void setDocumentProcessedQueue(String documentProcessedQueue) {
         this.documentProcessedQueue = documentProcessedQueue;
+    }
+
+    public String getDeadLetterExchange() {
+        return deadLetterExchange;
+    }
+
+    public void setDeadLetterExchange(String deadLetterExchange) {
+        this.deadLetterExchange = deadLetterExchange;
+    }
+
+    public String getTicketCreatedDlq() {
+        return ticketCreatedDlq;
+    }
+
+    public void setTicketCreatedDlq(String ticketCreatedDlq) {
+        this.ticketCreatedDlq = ticketCreatedDlq;
+    }
+
+    public String getDocumentProcessedDlq() {
+        return documentProcessedDlq;
+    }
+
+    public void setDocumentProcessedDlq(String documentProcessedDlq) {
+        this.documentProcessedDlq = documentProcessedDlq;
     }
 }
