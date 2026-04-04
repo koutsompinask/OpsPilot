@@ -85,6 +85,11 @@ assistant:
     enabled: ${ASSISTANT_MESSAGING_ENABLED:true}
     document-processed-exchange: ${DOCUMENT_PROCESSED_EXCHANGE:opspilot.events}
     document-processed-routing-key: ${DOCUMENT_PROCESSED_ROUTING_KEY:document.processed}
+  ingestion:
+    # Documents stuck in PROCESSING longer than this are marked FAILED by the watchdog
+    stuck-timeout-minutes: ${ASSISTANT_INGESTION_STUCK_TIMEOUT_MINUTES:30}
+    # How often the stuck-document watchdog runs (milliseconds); default 15 minutes
+    watchdog-interval-ms: ${ASSISTANT_INGESTION_WATCHDOG_INTERVAL_MS:900000}
 
 ai:
   chat:

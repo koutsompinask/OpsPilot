@@ -5,10 +5,14 @@ import com.opspilot.assistant.domain.entity.DocumentStatus;
 import com.opspilot.assistant.repository.DocumentRepository;
 import com.opspilot.assistant.service.embedding.EmbeddingService;
 import com.opspilot.assistant.util.logging.RequestCorrelation;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +33,10 @@ public class DocumentEmbeddingMaintenanceService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentEmbeddingMaintenanceService.class);
 
+    // Documents in PROCESSING beyond this threshold are assumed to be stuck (e.g. the
+    // service restarted mid-ingestion) and are marked FAILED by the watchdog
+    private final Duration stuckProcessingTimeout;
+
     private final DocumentRepository documentRepository;
     private final DocumentIngestionProcessor documentIngestionProcessor;
     private final EmbeddingService embeddingService;
@@ -36,11 +44,13 @@ public class DocumentEmbeddingMaintenanceService {
     public DocumentEmbeddingMaintenanceService(
             DocumentRepository documentRepository,
             DocumentIngestionProcessor documentIngestionProcessor,
-            EmbeddingService embeddingService
+            EmbeddingService embeddingService,
+            @Value("${assistant.ingestion.stuck-timeout-minutes:30}") long stuckTimeoutMinutes
     ) {
         this.documentRepository = documentRepository;
         this.documentIngestionProcessor = documentIngestionProcessor;
         this.embeddingService = embeddingService;
+        this.stuckProcessingTimeout = Duration.ofMinutes(stuckTimeoutMinutes);
     }
 
     /**
@@ -90,5 +100,33 @@ public class DocumentEmbeddingMaintenanceService {
                 activeProfile
         );
         return new EmbeddingIndexRefreshResult(outdated.size(), readyCount);
+    }
+
+    /**
+     * Periodic watchdog that marks any document stuck in {@code PROCESSING} as {@code FAILED}.
+     *
+     * <p>A document is considered stuck if it has been in {@code PROCESSING} state for longer
+     * than {@code assistant.ingestion.stuck-timeout-minutes} (default: 30 minutes). This covers
+     * the case where the service restarts mid-ingestion, leaving the async task orphaned with
+     * no thread to complete it. Running every 15 minutes provides recovery within one check
+     * interval after the timeout expires.</p>
+     */
+    @Scheduled(fixedDelayString = "${assistant.ingestion.watchdog-interval-ms:900000}")
+    @Transactional
+    public void markStuckDocumentsAsFailed() {
+        Instant cutoff = Instant.now().minus(stuckProcessingTimeout);
+        List<Document> stuck = documentRepository.findByStatusAndUpdatedAtBefore(DocumentStatus.PROCESSING, cutoff);
+        if (stuck.isEmpty()) {
+            return;
+        }
+        for (Document document : stuck) {
+            document.markFailed("Ingestion timed out — document was stuck in PROCESSING for more than " + stuckProcessingTimeout.toMinutes() + " minutes");
+            documentRepository.save(document);
+        }
+        log.warn(
+                "assistant_stuck_documents_failed count={} timeoutMinutes={}",
+                stuck.size(),
+                stuckProcessingTimeout.toMinutes()
+        );
     }
 }

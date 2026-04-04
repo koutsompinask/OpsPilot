@@ -2,6 +2,7 @@ package com.opspilot.assistant.repository;
 
 import com.opspilot.assistant.domain.entity.Document;
 import com.opspilot.assistant.domain.entity.DocumentStatus;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,4 +37,15 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
      * belongs to a different tenant.
      */
     Optional<Document> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    /**
+     * Returns all documents in {@code PROCESSING} state whose {@code updatedAt} timestamp
+     * is older than the given cutoff. Used by the stuck-document watchdog to identify
+     * ingestion tasks that never completed (e.g. due to a service restart or uncaught error).
+     *
+     * @param status  must be {@link DocumentStatus#PROCESSING}
+     * @param cutoff  documents updated before this instant are considered stuck
+     * @return list of stuck documents across all tenants
+     */
+    List<Document> findByStatusAndUpdatedAtBefore(DocumentStatus status, Instant cutoff);
 }
