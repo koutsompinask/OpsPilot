@@ -3,6 +3,8 @@ package com.opspilot.tenant.repository;
 import com.opspilot.tenant.domain.entity.UserProfile;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -23,4 +25,14 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
      * @return all profiles belonging to that tenant, or an empty list if none exist
      */
     List<UserProfile> findAllByTenant_Id(UUID tenantId);
+
+    /**
+     * Returns a page of user profiles for the given tenant; sort and page size are controlled
+     * by the caller via {@code pageable}.
+     *
+     * @param tenantId the tenant to filter by
+     * @param pageable pagination and sort parameters
+     * @return a page of user profiles
+     */
+    Page<UserProfile> findAllByTenant_Id(UUID tenantId, Pageable pageable);
 }

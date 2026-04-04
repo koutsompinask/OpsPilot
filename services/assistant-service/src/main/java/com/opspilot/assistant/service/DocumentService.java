@@ -16,6 +16,8 @@ import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -103,17 +105,16 @@ public class DocumentService {
     }
 
     /**
-     * Returns all documents for the caller's tenant, ordered newest-first.
+     * Returns a page of documents for the caller's tenant.
      *
      * @param currentUser the authenticated caller used for tenant scoping
-     * @return list of document metadata records
+     * @param pageable    pagination and sort parameters supplied by the caller
+     * @return a page of document metadata records
      */
     @Transactional(readOnly = true)
-    public List<DocumentResponse> list(CurrentUser currentUser) {
-        return documentRepository.findByTenantIdOrderByCreatedAtDesc(currentUser.tenantId())
-                .stream()
-                .map(DocumentResponse::fromEntity)
-                .toList();
+    public Page<DocumentResponse> list(CurrentUser currentUser, Pageable pageable) {
+        return documentRepository.findByTenantId(currentUser.tenantId(), pageable)
+                .map(DocumentResponse::fromEntity);
     }
 
     /**

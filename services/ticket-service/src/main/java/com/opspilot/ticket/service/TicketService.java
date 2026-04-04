@@ -19,6 +19,8 @@ import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -45,18 +47,17 @@ public class TicketService {
     }
 
     /**
-     * Returns all tickets for the caller's tenant, ordered by creation time descending.
+     * Returns a page of tickets for the caller's tenant, ordered by the sort specified in {@code pageable}.
      *
      * @param currentUser the authenticated principal used to scope the query to a single tenant
-     * @return ordered list of ticket responses; empty list if no tickets exist
+     * @param pageable    pagination and sort parameters supplied by the caller
+     * @return a page of ticket responses
      */
-    public List<TicketResponse> list(CurrentUser currentUser) {
-        log.info("ticket_list_requested tenantId={} userId={}", currentUser.tenantId(), currentUser.userId());
-        List<TicketResponse> tickets = ticketRepository.findByTenantIdOrderByCreatedAtDesc(currentUser.tenantId())
-                .stream()
-                .map(TicketResponse::fromEntity)
-                .toList();
-        log.info("ticket_list_succeeded tenantId={} userId={} ticketCount={}", currentUser.tenantId(), currentUser.userId(), tickets.size());
+    public Page<TicketResponse> list(CurrentUser currentUser, Pageable pageable) {
+        log.info("ticket_list_requested tenantId={} userId={} page={} size={}", currentUser.tenantId(), currentUser.userId(), pageable.getPageNumber(), pageable.getPageSize());
+        Page<TicketResponse> tickets = ticketRepository.findByTenantId(currentUser.tenantId(), pageable)
+                .map(TicketResponse::fromEntity);
+        log.info("ticket_list_succeeded tenantId={} userId={} ticketCount={} totalElements={}", currentUser.tenantId(), currentUser.userId(), tickets.getNumberOfElements(), tickets.getTotalElements());
         return tickets;
     }
 

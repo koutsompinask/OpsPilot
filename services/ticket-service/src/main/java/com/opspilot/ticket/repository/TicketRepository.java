@@ -4,6 +4,8 @@ import com.opspilot.ticket.domain.entity.Ticket;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -22,6 +24,15 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
      * @return ordered list of tickets; empty if none exist for the tenant
      */
     List<Ticket> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+
+    /**
+     * Returns a page of tickets for a tenant; sort and page size are controlled by the caller via {@code pageable}.
+     *
+     * @param tenantId the tenant whose tickets to fetch
+     * @param pageable pagination and sort parameters
+     * @return a page of tickets
+     */
+    Page<Ticket> findByTenantId(UUID tenantId, Pageable pageable);
 
     /**
      * Looks up a ticket by its primary key within the bounds of a specific tenant.

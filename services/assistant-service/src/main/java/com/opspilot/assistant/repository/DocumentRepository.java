@@ -5,6 +5,8 @@ import com.opspilot.assistant.domain.entity.DocumentStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -16,6 +18,9 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
     /** Returns all documents for a tenant, ordered newest-first. */
     List<Document> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+
+    /** Returns a page of documents for a tenant; sort and page size are controlled by the caller via {@code pageable}. */
+    Page<Document> findByTenantId(UUID tenantId, Pageable pageable);
 
     /**
      * Returns documents whose {@code embeddingProfile} does not match the given profile,

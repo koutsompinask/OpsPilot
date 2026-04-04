@@ -21,6 +21,8 @@ import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -132,22 +134,22 @@ public class TenantService {
     }
 
     /**
-     * Returns all user profiles belonging to the given tenant.
+     * Returns a page of user profiles belonging to the given tenant.
      *
      * <p>Tenant isolation is enforced by the repository query: {@code findAllByTenant_Id}
      * generates a {@code WHERE tenant_id = ?} clause, so only profiles linked to the
      * caller's own tenant are ever returned.
      *
      * @param tenantId the ID of the tenant whose users should be listed
-     * @return all user profiles for the tenant
+     * @param pageable pagination and sort parameters supplied by the caller
+     * @return a page of user profiles for the tenant
      */
-    public List<UserResponse> listUsers(UUID tenantId) {
-        log.info("tenant_users_list_requested tenantId={}", tenantId);
+    public Page<UserResponse> listUsers(UUID tenantId, Pageable pageable) {
+        log.info("tenant_users_list_requested tenantId={} page={} size={}", tenantId, pageable.getPageNumber(), pageable.getPageSize());
         // tenant_id filter is applied at query time — no cross-tenant data can leak through
-        List<UserResponse> users = userProfileRepository.findAllByTenant_Id(tenantId).stream()
-                .map(this::toUserResponse)
-                .toList();
-        log.info("tenant_users_list_succeeded tenantId={} userCount={}", tenantId, users.size());
+        Page<UserResponse> users = userProfileRepository.findAllByTenant_Id(tenantId, pageable)
+                .map(this::toUserResponse);
+        log.info("tenant_users_list_succeeded tenantId={} userCount={} totalElements={}", tenantId, users.getNumberOfElements(), users.getTotalElements());
         return users;
     }
 

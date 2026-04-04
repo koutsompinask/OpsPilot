@@ -8,8 +8,11 @@ import com.opspilot.ticket.security.CurrentUser;
 import com.opspilot.ticket.security.CurrentUserResolver;
 import com.opspilot.ticket.service.TicketService;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -44,15 +47,22 @@ public class TicketController {
     }
 
     /**
-     * Returns all tickets belonging to the caller's tenant, ordered by creation time descending.
+     * Returns a page of tickets belonging to the caller's tenant.
      *
-     * @param jwt the verified JWT principal injected by Spring Security
-     * @return list of ticket responses scoped to the caller's tenant
+     * <p>Defaults to 20 tickets per page, sorted by {@code createdAt} descending. Callers can
+     * override via standard Spring {@code ?page=}, {@code ?size=}, and {@code ?sort=} query params.
+     *
+     * @param jwt      the verified JWT principal injected by Spring Security
+     * @param pageable pagination and sort parameters; defaults to page 0, size 20, newest-first
+     * @return a page of ticket responses scoped to the caller's tenant
      */
     @GetMapping
-    public List<TicketResponse> list(@AuthenticationPrincipal Jwt jwt) {
+    public Page<TicketResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
         CurrentUser currentUser = currentUserResolver.fromJwt(jwt);
-        return ticketService.list(currentUser);
+        return ticketService.list(currentUser, pageable);
     }
 
     /**

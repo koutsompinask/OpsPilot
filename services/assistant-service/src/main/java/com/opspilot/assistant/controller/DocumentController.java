@@ -6,8 +6,11 @@ import com.opspilot.assistant.security.CurrentUser;
 import com.opspilot.assistant.security.CurrentUserResolver;
 import com.opspilot.assistant.service.DocumentService;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -66,14 +69,21 @@ public class DocumentController {
     }
 
     /**
-     * Returns all documents belonging to the caller's tenant, ordered by creation time descending.
+     * Returns a page of documents belonging to the caller's tenant.
      *
-     * @param jwt the caller's validated Bearer JWT
-     * @return list of document metadata records for the tenant
+     * <p>Defaults to 20 documents per page, sorted by {@code createdAt} descending. Callers can
+     * override via standard Spring {@code ?page=}, {@code ?size=}, and {@code ?sort=} query params.
+     *
+     * @param jwt      the caller's validated Bearer JWT
+     * @param pageable pagination and sort parameters; defaults to page 0, size 20, newest-first
+     * @return a page of document metadata records for the tenant
      */
     @GetMapping
-    public List<DocumentResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        return documentService.list(currentUserResolver.fromJwt(jwt));
+    public Page<DocumentResponse> list(
+            @AuthenticationPrincipal Jwt jwt,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return documentService.list(currentUserResolver.fromJwt(jwt), pageable);
     }
 
     /**
