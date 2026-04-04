@@ -10,6 +10,14 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+/**
+ * MVC interceptor that enriches MDC with user identity fields from the JWT, so every log
+ * statement in a request is automatically tagged with the user and tenant.
+ *
+ * Extracts {@code sub} (userId), {@code tenant_id}, and {@code email} claims and writes
+ * them to MDC keys {@code userId}, {@code tenantId}, and {@code userEmail}. Cleaned up
+ * in {@code afterCompletion} to prevent MDC leakage across pooled threads.
+ */
 @Component
 public class UserContextMdcInterceptor implements HandlerInterceptor {
 

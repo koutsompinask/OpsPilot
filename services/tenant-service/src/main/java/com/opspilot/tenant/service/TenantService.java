@@ -23,6 +23,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Core business-logic service for tenant and user-profile management.
+ *
+ * <p>This service owns two distinct flows:
+ * <ol>
+ *   <li><b>Bootstrap</b> — called internally by auth-service when a new tenant registers.
+ *       Creates the {@link Tenant} record and the initial admin {@link UserProfile} in one
+ *       transaction. The user ID and tenant ID are assigned by auth-service before this call.</li>
+ *   <li><b>User creation</b> — called by tenant admins to invite additional users. Generates
+ *       a new UUID for the user, calls auth-service to provision the credential account first
+ *       (bi-directional provisioning), then persists the local {@link UserProfile}. Both steps
+ *       run inside a single transaction so a failure in auth-service rolls back the profile save.</li>
+ * </ol>
+ */
 @Service
 public class TenantService {
 
@@ -38,6 +52,18 @@ public class TenantService {
         this.authClient = authClient;
     }
 
+    /**
+     * Creates the tenant record and initial admin profile as part of the registration bootstrap.
+     *
+     * <p>This method is called by {@link com.opspilot.tenant.controller.InternalTenantController}
+     * on behalf of auth-service. Because the new tenant's JWT does not exist yet, auth-service
+     * acts as a trusted orchestrator: it creates the credential record, then calls this endpoint
+     * with the pre-assigned tenant and user IDs. Both the {@link Tenant} and admin
+     * {@link UserProfile} are persisted in a single transaction.
+     *
+     * @param request tenant and admin-user details forwarded by auth-service
+     * @throws ConflictException if a tenant with the given ID already exists
+     */
     @Transactional
     public void bootstrapTenant(InternalBootstrapTenantRequest request) {
         log.info(
@@ -46,6 +72,7 @@ public class TenantService {
                 request.adminUserId(),
                 normalizeEmail(request.adminEmail())
         );
+        // Guard against duplicate bootstrap calls (e.g. auth-service retry on a transient error)
         if (tenantRepository.existsById(request.tenantId())) {
             log.warn("tenant_bootstrap_conflict tenantId={}", request.tenantId());
             throw new ConflictException("Tenant already exists");
@@ -66,6 +93,13 @@ public class TenantService {
         log.info("tenant_bootstrap_succeeded tenantId={} adminUserId={}", tenant.getId(), admin.getUserId());
     }
 
+    /**
+     * Retrieves the tenant profile for the given tenant ID.
+     *
+     * @param tenantId the ID of the tenant to look up
+     * @return the tenant's profile including name and settings JSON
+     * @throws NotFoundException if no tenant with the given ID exists
+     */
     public TenantResponse getTenant(UUID tenantId) {
         log.info("tenant_get_requested tenantId={}", tenantId);
         Tenant tenant = tenantRepository.findById(tenantId)
@@ -74,6 +108,17 @@ public class TenantService {
         return new TenantResponse(tenant.getId(), tenant.getName(), tenant.getSettingsJson());
     }
 
+    /**
+     * Updates the name and settings for the given tenant.
+     *
+     * <p>The caller's tenant ID is taken from the JWT in the controller and passed directly here,
+     * ensuring a user can never modify a different tenant's profile.
+     *
+     * @param tenantId the ID of the tenant to update
+     * @param request  the new name and optional settings JSON
+     * @return the updated tenant profile
+     * @throws NotFoundException if no tenant with the given ID exists
+     */
     @Transactional
     public TenantResponse updateTenant(UUID tenantId, UpdateTenantRequest request) {
         log.info("tenant_update_requested tenantId={} name={}", tenantId, request.name());
@@ -86,8 +131,19 @@ public class TenantService {
         return new TenantResponse(tenant.getId(), tenant.getName(), tenant.getSettingsJson());
     }
 
+    /**
+     * Returns all user profiles belonging to the given tenant.
+     *
+     * <p>Tenant isolation is enforced by the repository query: {@code findAllByTenant_Id}
+     * generates a {@code WHERE tenant_id = ?} clause, so only profiles linked to the
+     * caller's own tenant are ever returned.
+     *
+     * @param tenantId the ID of the tenant whose users should be listed
+     * @return all user profiles for the tenant
+     */
     public List<UserResponse> listUsers(UUID tenantId) {
         log.info("tenant_users_list_requested tenantId={}", tenantId);
+        // tenant_id filter is applied at query time — no cross-tenant data can leak through
         List<UserResponse> users = userProfileRepository.findAllByTenant_Id(tenantId).stream()
                 .map(this::toUserResponse)
                 .toList();
@@ -95,6 +151,24 @@ public class TenantService {
         return users;
     }
 
+    /**
+     * Creates a new user within the actor's tenant, provisioning both auth and profile records.
+     *
+     * <p>The UUID for the new user is generated here and shared with auth-service in the same
+     * call, keeping the primary key consistent across services. The sequence is:
+     * <ol>
+     *   <li>Generate a new {@code userId}</li>
+     *   <li>Call auth-service via {@link AuthClient} to create the credential account — if this
+     *       fails, an {@link com.opspilot.tenant.exception.UpstreamServiceException} is thrown
+     *       and the transaction rolls back before the profile is persisted</li>
+     *   <li>Persist the local {@link UserProfile}</li>
+     * </ol>
+     *
+     * @param actor   the authenticated admin performing the operation; provides the tenant scope
+     * @param request the new user's display name, email, password, and optional role
+     * @return the newly created user profile
+     * @throws NotFoundException if the actor's tenant record no longer exists
+     */
     @Transactional
     public UserResponse createUser(CurrentUser actor, CreateUserRequest request) {
         log.info(
@@ -107,9 +181,13 @@ public class TenantService {
         Tenant tenant = tenantRepository.findById(actor.tenantId())
                 .orElseThrow(() -> new NotFoundException(TENANT_NOT_FOUND_MSG));
 
+        // Default role to TENANT_MEMBER when the caller omits the field
         Role requestedRole = request.role() == null ? Role.TENANT_MEMBER : request.role();
+        // Generate the UUID here so that both auth-service and tenant-service share the same user ID
         UUID userId = UUID.randomUUID();
 
+        // Bi-directional provisioning: auth-service must create the credential record first;
+        // if it fails the enclosing transaction will roll back and no profile will be saved
         authClient.createUser(new InternalCreateAuthUserRequest(
                 userId,
                 actor.tenantId(),
@@ -146,6 +224,7 @@ public class TenantService {
         );
     }
 
+    /** Normalises an email address to lowercase with surrounding whitespace removed. */
     private String normalizeEmail(String email) {
         return email.toLowerCase(Locale.ROOT).trim();
     }

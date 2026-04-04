@@ -20,6 +20,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * Application service for managing tenant documents throughout their lifecycle.
+ *
+ * <p>Handles document upload validation, object-storage persistence, and async ingestion
+ * kick-off, as well as list, get, and delete operations. All operations are tenant-scoped
+ * using the {@link CurrentUser#tenantId()} from the authenticated caller. Mutation
+ * operations are restricted to {@code TENANT_ADMIN} users; the check is enforced here
+ * rather than in the controller so the restriction cannot be accidentally bypassed.</p>
+ */
 @Service
 public class DocumentService {
 
@@ -45,6 +54,21 @@ public class DocumentService {
         this.embeddingService = embeddingService;
     }
 
+    /**
+     * Validates, stores, and enqueues a document for async ingestion.
+     *
+     * <p>The document record is persisted immediately in {@code PROCESSING} status so that
+     * callers can poll its state. Actual chunking and embedding happen asynchronously via
+     * {@link DocumentIngestionProcessor#processAsync}. The active embedding profile is
+     * captured at upload time so that re-indexing can be detected later if the profile changes.</p>
+     *
+     * @param currentUser the admin user performing the upload
+     * @param file        the multipart file to store and ingest
+     * @param requestId   the optional correlation ID from the HTTP header; a new UUID is generated if absent
+     * @return the persisted document metadata (status will be {@code PROCESSING})
+     * @throws com.opspilot.assistant.exception.ForbiddenException    if the caller is not a tenant admin
+     * @throws com.opspilot.assistant.exception.BadRequestException   if the file is missing, empty, or not a supported type
+     */
     public DocumentResponse create(CurrentUser currentUser, MultipartFile file, String requestId) {
         requireAdmin(currentUser);
         validateFile(file);
@@ -78,6 +102,12 @@ public class DocumentService {
         return DocumentResponse.fromEntity(document);
     }
 
+    /**
+     * Returns all documents for the caller's tenant, ordered newest-first.
+     *
+     * @param currentUser the authenticated caller used for tenant scoping
+     * @return list of document metadata records
+     */
     @Transactional(readOnly = true)
     public List<DocumentResponse> list(CurrentUser currentUser) {
         return documentRepository.findByTenantIdOrderByCreatedAtDesc(currentUser.tenantId())
@@ -86,6 +116,14 @@ public class DocumentService {
                 .toList();
     }
 
+    /**
+     * Returns the metadata for a single document, scoped to the caller's tenant.
+     *
+     * @param currentUser the authenticated caller used for tenant scoping
+     * @param documentId  the UUID of the document to retrieve
+     * @return the document metadata
+     * @throws com.opspilot.assistant.exception.NotFoundException if no document with that ID exists for the tenant
+     */
     @Transactional(readOnly = true)
     public DocumentResponse get(CurrentUser currentUser, UUID documentId) {
         Document document = documentRepository.findByIdAndTenantId(documentId, currentUser.tenantId())
@@ -93,6 +131,18 @@ public class DocumentService {
         return DocumentResponse.fromEntity(document);
     }
 
+    /**
+     * Deletes a document, all its associated chunks, and the underlying storage object.
+     *
+     * <p>Deletion is performed in dependency order: chunks first, then storage, then the
+     * document record. This ensures that a partial failure (e.g. storage service unavailable)
+     * does not leave orphaned chunk rows referencing a deleted document.</p>
+     *
+     * @param currentUser the admin user performing the delete
+     * @param documentId  the UUID of the document to delete
+     * @throws com.opspilot.assistant.exception.ForbiddenException  if the caller is not a tenant admin
+     * @throws com.opspilot.assistant.exception.NotFoundException   if no document with that ID exists for the tenant
+     */
     @Transactional
     public void delete(CurrentUser currentUser, UUID documentId) {
         requireAdmin(currentUser);

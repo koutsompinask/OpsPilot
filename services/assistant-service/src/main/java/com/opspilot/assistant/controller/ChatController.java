@@ -15,6 +15,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST controller that exposes the RAG-powered chat endpoint.
+ *
+ * <p>Accepts natural-language questions from authenticated users and delegates to
+ * {@link ChatService} for full RAG pipeline execution: embedding, hybrid retrieval,
+ * reranking, answer generation, and optional ticket escalation.</p>
+ */
 @RestController
 @RequestMapping("/chat")
 public class ChatController {
@@ -29,6 +36,18 @@ public class ChatController {
         this.chatService = chatService;
     }
 
+    /**
+     * Handles a natural-language question and returns an AI-generated answer with
+     * supporting evidence chunks.
+     *
+     * <p>If the generated answer falls below the configured confidence threshold,
+     * a support ticket is automatically created on behalf of the user and the response
+     * includes {@code ticketCreated: true}.</p>
+     *
+     * @param request the question payload, including optional {@code topK} override
+     * @param jwt     the validated Bearer JWT injected by Spring Security
+     * @return the answer, confidence score, source list, evidence chunks, and escalation flag
+     */
     @PostMapping("/ask")
     public ChatAskResponse ask(@Valid @RequestBody ChatAskRequest request, @AuthenticationPrincipal Jwt jwt) {
         long startedAt = System.currentTimeMillis();

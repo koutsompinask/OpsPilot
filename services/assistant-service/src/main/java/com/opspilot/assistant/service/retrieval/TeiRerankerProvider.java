@@ -13,6 +13,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Reranker provider backed by a Hugging Face Text Embeddings Inference (TEI) server.
+ *
+ * <p>TEI's rerank endpoint returns an array of {@code {index, score}} objects (or
+ * {@code {index, relevance_score}} depending on model version). This provider handles
+ * both field names and applies sigmoid normalisation to scores that fall outside
+ * {@code [0, 1]}, so all scores returned are guaranteed to be in that range regardless
+ * of whether the model output is a raw logit or a probability.</p>
+ */
 @Component
 public class TeiRerankerProvider implements RerankerProvider {
 
@@ -37,6 +46,17 @@ public class TeiRerankerProvider implements RerankerProvider {
         return properties.getTei().getModel();
     }
 
+    /**
+     * Sends the query and passages to the TEI rerank endpoint and returns scored results.
+     *
+     * <p>The {@code truncate=true} flag in the request body asks TEI to silently truncate
+     * passages that exceed the model's token limit rather than returning an error, keeping
+     * behaviour consistent even for long chunks.</p>
+     *
+     * @param query    the user's question; must be non-blank
+     * @param passages the candidate passages to score; must be non-empty
+     * @return results sorted by descending relevance score
+     */
     @Override
     public List<RerankResult> rerank(String query, List<String> passages) {
         if (query == null || query.isBlank()) {
@@ -49,6 +69,7 @@ public class TeiRerankerProvider implements RerankerProvider {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
+        // truncate=true prevents token-limit errors on long passages
         ResponseEntity<JsonNode> response = restTemplate.postForEntity(
                 properties.getTei().getUrl(),
                 new HttpEntity<>(new TeiRerankRequest(query, passages, true), headers),
@@ -56,6 +77,7 @@ public class TeiRerankerProvider implements RerankerProvider {
         );
 
         JsonNode body = response.getBody();
+        // TEI can return either a top-level array or an object with "results"/"data" key
         JsonNode resultsNode = extractResultsNode(body);
         if (resultsNode == null || !resultsNode.isArray()) {
             throw new BadRequestException("Unexpected reranker response from TEI");
@@ -63,6 +85,7 @@ public class TeiRerankerProvider implements RerankerProvider {
 
         List<RerankResult> results = new ArrayList<>();
         for (JsonNode node : resultsNode) {
+            // Tolerate both "score" (newer TEI) and "relevance_score" (older TEI) field names
             if (node == null || !node.has("index") || (!node.has("score") && !node.has("relevance_score"))) {
                 continue;
             }
@@ -83,6 +106,7 @@ public class TeiRerankerProvider implements RerankerProvider {
         if (body == null) {
             return null;
         }
+        // Handle flat array, {"results": [...]} and {"data": [...]} response shapes
         if (body.isArray()) {
             return body;
         }
@@ -96,9 +120,11 @@ public class TeiRerankerProvider implements RerankerProvider {
     }
 
     private double normalize(double rawScore) {
+        // If score is already a probability in [0, 1], return as-is
         if (rawScore >= 0.0 && rawScore <= 1.0) {
             return rawScore;
         }
+        // Otherwise apply sigmoid to convert raw logits into [0, 1]
         return 1.0 / (1.0 + Math.exp(-rawScore));
     }
 

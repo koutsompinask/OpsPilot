@@ -11,6 +11,17 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * JPA entity representing a user's authentication credential record in the {@code auth.auth_users}
+ * table.
+ *
+ * <p>This entity is owned exclusively by the auth-service and is the authority for credential
+ * verification. It stores the application-managed salt and BCrypt hash (see
+ * {@link com.opspilot.auth.service.PasswordHashService}) separately to harden against partial
+ * data-breach scenarios. The {@code tenant_id} links this record to the corresponding tenant
+ * profile in tenant-service, but no FK constraint crosses service boundaries — referential
+ * integrity is maintained at the application level.</p>
+ */
 @Entity
 @Table(name = "auth_users", schema = "auth")
 public class AuthUser {

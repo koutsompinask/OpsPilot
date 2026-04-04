@@ -6,6 +6,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Provider-agnostic facade for answer generation in the RAG pipeline.
+ *
+ * <p>Selects an {@link AnswerGenerator} implementation at runtime based on the
+ * {@code ai.answer.provider} configuration property ({@code openai}, {@code ollama} /
+ * {@code local-llm}, or {@code extractive}). If the selected provider fails at runtime,
+ * the service falls back to the local extractive generator so that a response is always
+ * returned to the caller.</p>
+ */
 @Service
 public class AnswerService {
 
@@ -28,12 +37,21 @@ public class AnswerService {
         this.localAnswerGenerator = localAnswerGenerator;
     }
 
+    /**
+     * Generates an answer for the given question using the configured provider, falling back
+     * to the local extractive generator if the provider throws any exception.
+     *
+     * @param question the user's question (pre-normalized by the caller)
+     * @param chunks   the ranked evidence chunks retrieved from the knowledge base
+     * @return the generated answer along with provider metadata and the answer mode
+     */
     public AnswerGenerationResult generate(String question, List<RetrievedChunk> chunks) {
         String provider = properties.getProvider() == null ? "extractive" : properties.getProvider().trim().toLowerCase();
         try {
             return switch (provider) {
                 case "openai" -> generateWithOpenAi(question, chunks);
                 case "ollama", "local-llm" -> generateWithOllama(question, chunks);
+                // "extractive" or any unrecognised value falls through to the local generator
                 default -> generateExtractive(question, chunks);
             };
         } catch (Exception ex) {

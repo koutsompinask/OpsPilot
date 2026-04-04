@@ -6,6 +6,18 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC repository that executes the hybrid vector + lexical retrieval queries against
+ * {@code assistant.document_chunks}.
+ *
+ * <ul>
+ *   <li>{@link #searchTopVectorChunks} — uses pgvector cosine distance ({@code <=>}) for semantic retrieval</li>
+ *   <li>{@link #searchTopLexicalChunks} — uses PostgreSQL full-text search ({@code ts_rank_cd / websearch_to_tsquery}) for keyword retrieval</li>
+ * </ul>
+ *
+ * Results from both queries are merged by {@link com.opspilot.assistant.service.retrieval.ChunkRetrievalService}
+ * using Reciprocal Rank Fusion before reranking.
+ */
 @Repository
 public class DocumentChunkSearchRepository {
 
@@ -15,6 +27,18 @@ public class DocumentChunkSearchRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Retrieves the top-{@code limit} chunks by cosine distance to the query embedding.
+     *
+     * Only chunks from {@code READY} documents matching the active {@code embeddingProfile}
+     * are considered, ensuring vector space consistency.
+     *
+     * @param tenantId         the owning tenant (enforces isolation)
+     * @param embeddingProfile the active embedding model profile name
+     * @param queryEmbedding   the query vector to search against
+     * @param limit            maximum number of results to return
+     * @return candidate chunks ordered by ascending cosine distance (closest first)
+     */
     public List<RetrievedChunk> searchTopVectorChunks(UUID tenantId, String embeddingProfile, List<Double> queryEmbedding, int limit) {
         String sql = """
                 SELECT d.id AS document_id,
@@ -54,6 +78,18 @@ public class DocumentChunkSearchRepository {
         ));
     }
 
+    /**
+     * Retrieves the top-{@code limit} chunks by full-text relevance score.
+     *
+     * Section titles are weighted 'A' (highest), document filenames 'B', and body text 'C',
+     * using PostgreSQL's {@code ts_rank_cd} with weighted tsvectors.
+     *
+     * @param tenantId         the owning tenant (enforces isolation)
+     * @param embeddingProfile the active embedding model profile name
+     * @param question         the user's question, passed to {@code websearch_to_tsquery}
+     * @param limit            maximum number of results to return
+     * @return candidate chunks ordered by descending lexical relevance score
+     */
     public List<RetrievedChunk> searchTopLexicalChunks(UUID tenantId, String embeddingProfile, String question, int limit) {
         String sql = """
                 SELECT d.id AS document_id,

@@ -8,6 +8,13 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * JDBC repository for managing {@code assistant.document_chunks} rows.
+ *
+ * Uses {@link NamedParameterJdbcTemplate} directly (rather than JPA) to support bulk batch
+ * inserts with the pgvector {@code CAST(:embedding AS vector)} syntax, which JPA's type system
+ * cannot handle natively.
+ */
 @Repository
 public class DocumentChunkRepository {
 
@@ -17,6 +24,16 @@ public class DocumentChunkRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Atomically replaces all chunks for a document: deletes existing rows then inserts the new batch.
+     *
+     * Used during (re-)ingestion to ensure the chunk set always reflects the current embedding model.
+     *
+     * @param documentId the document whose chunks are being replaced
+     * @param tenantId   the owning tenant (used in both delete and insert for isolation)
+     * @param chunks     the new text chunks to store
+     * @param embeddings the embedding vectors corresponding to each chunk, aligned by index
+     */
     @Transactional
     public void replaceForDocument(UUID documentId, UUID tenantId, List<TextChunk> chunks, List<List<Double>> embeddings) {
         deleteForDocument(documentId, tenantId);
@@ -45,6 +62,12 @@ public class DocumentChunkRepository {
         jdbcTemplate.batchUpdate(sql, batch);
     }
 
+    /**
+     * Deletes all chunks for the specified document within the given tenant.
+     *
+     * @param documentId the document whose chunks should be removed
+     * @param tenantId   the owning tenant (enforces isolation)
+     */
     @Transactional
     public void deleteForDocument(UUID documentId, UUID tenantId) {
         jdbcTemplate.update(

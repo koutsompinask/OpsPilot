@@ -12,6 +12,13 @@ import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+/**
+ * Ensures the MinIO document storage bucket exists at application startup.
+ *
+ * If {@code assistant.storage.auto-create-bucket} is {@code true} (the default) and the
+ * configured bucket does not yet exist, this component creates it. This prevents ingestion
+ * failures caused by a missing bucket in fresh local or CI environments.
+ */
 @Component
 public class StorageBucketInitializer implements ApplicationRunner {
 

@@ -6,6 +6,13 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * Configuration properties for the reranking subsystem, bound from the {@code assistant.reranker} prefix.
+ *
+ * <p>{@code candidateLimit} controls how many chunks are sent to the reranker per query (the top
+ * candidates from hybrid retrieval). {@code maxPassageCharacters} truncates each passage before
+ * sending it to guard against model token limits and to keep latency predictable.</p>
+ */
 @Validated
 @ConfigurationProperties(prefix = "assistant.reranker")
 public class RerankerProperties {

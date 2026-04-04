@@ -13,6 +13,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Hybrid retrieval service that combines vector (semantic) and lexical (full-text) search
+ * results using Reciprocal Rank Fusion (RRF) before handing candidates to the reranker.
+ *
+ * <p>Retrieval pipeline:
+ * <ol>
+ *   <li>Embed the query with the active embedding provider.</li>
+ *   <li>Issue two independent candidate queries against the database:
+ *       a pgvector cosine-distance search and a PostgreSQL full-text ({@code ts_rank_cd}) search.</li>
+ *   <li>Fuse the two ranked lists with RRF to produce a single merged ranking that rewards
+ *       chunks appearing near the top of both lists.</li>
+ *   <li>Pass the merged candidates to {@link RerankerService} for neural or heuristic reranking
+ *       down to the requested {@code topK}.</li>
+ * </ol>
+ * The recall limit for each individual query is {@code max(8, topK * 3)} to ensure the
+ * reranker has enough candidates to work with, while keeping the database query size bounded.</p>
+ */
 @Service
 public class ChunkRetrievalService {
 
@@ -32,9 +49,20 @@ public class ChunkRetrievalService {
         this.rerankerService = rerankerService;
     }
 
+    /**
+     * Executes the full hybrid retrieval pipeline for the given question and returns
+     * the top-K reranked evidence chunks scoped to the tenant's ready documents.
+     *
+     * @param tenantId the tenant whose document index should be searched
+     * @param question the user's question (pre-normalized by the caller)
+     * @param topK     the maximum number of chunks to return after reranking
+     * @return the ranked evidence chunks; may be empty if no relevant documents exist
+     */
     public List<RetrievedChunk> retrieve(UUID tenantId, String question, int topK) {
         String profile = embeddingService.profile().id();
         List<Double> queryEmbedding = embeddingService.provider().embed(List.of(question)).getFirst();
+        // Over-retrieve by ~3x so the reranker has a meaningful pool to work with;
+        // minimum of 8 ensures small topK values still give the reranker enough candidates.
         int recallLimit = Math.max(8, topK * 3);
 
         List<RetrievedChunk> vectorCandidates = searchRepository.searchTopVectorChunks(tenantId, profile, queryEmbedding, recallLimit);
@@ -104,6 +132,9 @@ public class ChunkRetrievalService {
         }
 
         private void addRank(int rank, boolean vectorPass, RetrievedChunk candidate) {
+            // RRF formula: score += 1 / (k + rank), where k=60 is the standard constant
+            // that dampens the outsized benefit of being ranked #1 vs #2, making the
+            // fusion more robust to ranking noise in either retrieval leg.
             fusedScore += 1.0 / (60.0 + rank);
             if (vectorPass) {
                 vectorDistance = candidate.vectorDistance();

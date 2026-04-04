@@ -2,6 +2,13 @@ package com.opspilot.assistant.service.storage;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * Configuration properties for the MinIO (S3-compatible) object storage backend,
+ * bound from the {@code assistant.storage.*} namespace.
+ *
+ * All document files uploaded by tenants are stored in a single shared bucket,
+ * namespaced under {@code {tenantId}/{documentId}/} key prefixes.
+ */
 @ConfigurationProperties(prefix = "assistant.storage")
 public class StorageProperties {
 

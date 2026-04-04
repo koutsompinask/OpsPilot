@@ -10,6 +10,18 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
+/**
+ * A deterministic, extractive {@link AnswerGenerator} that runs entirely in-process without
+ * calling any external LLM service.
+ *
+ * Used as the {@code "local"} provider for local development and testing environments where
+ * Ollama or OpenAI is not available. It scores individual sentences within the retrieved
+ * chunks by token overlap with the question and reranker score, then assembles the top
+ * sentences into an answer.
+ *
+ * The output is intentionally simple and may not read naturally — it is designed for
+ * functional testing, not production quality.
+ */
 @Component
 public class LocalDeterministicAnswerGenerator implements AnswerGenerator {
 

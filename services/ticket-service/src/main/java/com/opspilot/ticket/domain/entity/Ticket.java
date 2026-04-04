@@ -11,6 +11,18 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * JPA entity representing a support ticket within the ticket-service.
+ *
+ * <p>Tickets are scoped to a tenant and track the question that triggered escalation, the
+ * assistant's response (if any), the confidence score at the time of creation, and the number
+ * of knowledge-base sources cited. The {@link #origin} field distinguishes manually created
+ * tickets from those auto-escalated by the assistant-service. The {@link #status} field tracks
+ * the ticket's lifecycle from {@code OPEN} through to {@code RESOLVED}.</p>
+ *
+ * <p>Timestamps are managed automatically via JPA lifecycle callbacks {@link #onCreate()} and
+ * {@link #onUpdate()}.</p>
+ */
 @Entity
 @Table(name = "tickets", schema = "ticket")
 public class Ticket {

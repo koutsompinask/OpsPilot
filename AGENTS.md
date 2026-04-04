@@ -40,7 +40,7 @@ Rules:
 1. Implemented backend services must use this top-level package structure under `com.opspilot.<service>`:
    - `config`, `controller`, `service`, `repository`, `domain`, `dto`, `mapper`, `exception`, `security`, `util`
 2. Domain entities must live under `domain/entity` (not `entity` at the top level).
-3. Only create folders when they are relevant to actual code; do not add placeholder files only to satisfy structure.
+3. Only create folders when they contain actual code. Do not create empty folders to pre-empt a package structure, and do not add placeholder files only to satisfy structure. If a package has no code yet, omit the folder entirely.
 4. Subcategories must be nested under their parent domain package (examples: `service/storage`, `service/embedding`, `util/logging`, `service/integration`).
 5. Do not introduce ad-hoc top-level package folders (e.g. `client`, `logging`, `storage`, `embedding`, `messaging`, `chunking`, `entity`).
 6. Validate structure changes with `bash scripts/verify-service-structure.sh`.

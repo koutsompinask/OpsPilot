@@ -11,6 +11,13 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Centralised exception handler for the ticket-service.
+ *
+ * Maps all exceptions to structured {@link ApiError} responses. 4xx responses are logged at
+ * WARN level; 5xx responses are logged at ERROR level. The generic fallback returns 500
+ * with a non-revealing message to prevent internal details from leaking to clients.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

@@ -11,6 +11,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * {@link AnswerGenerator} implementation that calls a locally running Ollama instance to
+ * produce grounded answers.
+ *
+ * The generator builds a prompt from the retrieved chunks, posts it to the Ollama
+ * {@code /api/generate} endpoint, and parses the {@code "answer"} and
+ * {@code "reasoningSummary"} fields from the JSON response. If the model does not return
+ * valid JSON, the raw response text is used as the answer.
+ *
+ * Configured via {@code ai.answer.ollama.*} (model, URL, timeout).
+ */
 @Component
 public class OllamaAnswerGenerator implements AnswerGenerator {
 

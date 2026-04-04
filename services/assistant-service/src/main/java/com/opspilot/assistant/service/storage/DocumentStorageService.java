@@ -13,6 +13,13 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+/**
+ * Manages raw document file storage in MinIO (S3-compatible object storage).
+ *
+ * Files are stored under the key pattern {@code {tenantId}/{documentId}/{sanitizedFilename}},
+ * providing implicit tenant namespacing at the storage layer. This class handles upload,
+ * full-content retrieval (for ingestion), and deletion.
+ */
 @Service
 public class DocumentStorageService {
 
@@ -24,7 +31,19 @@ public class DocumentStorageService {
         this.properties = properties;
     }
 
+    /**
+     * Uploads a document file to object storage and returns its storage key.
+     *
+     * The key follows the pattern {@code {tenantId}/{documentId}/{sanitizedFilename}}.
+     *
+     * @param tenantId   the owning tenant's ID (used as the top-level key prefix)
+     * @param documentId the document's ID (used as the second-level key prefix)
+     * @param file       the multipart file to upload
+     * @return the storage key under which the file was persisted
+     * @throws StorageException if the upload fails
+     */
     public String store(UUID tenantId, UUID documentId, MultipartFile file) {
+        // Key pattern: {tenantId}/{documentId}/{sanitizedFilename} — provides tenant namespacing in the shared bucket
         String key = tenantId + "/" + documentId + "/" + sanitize(file.getOriginalFilename());
         try {
             PutObjectRequest request = PutObjectRequest.builder()
@@ -39,6 +58,13 @@ public class DocumentStorageService {
         }
     }
 
+    /**
+     * Downloads the full content of a stored document and decodes it as UTF-8 text.
+     *
+     * @param key the storage key returned by {@link #store}
+     * @return the document content as a string
+     * @throws StorageException if the file cannot be retrieved
+     */
     public String loadText(String key) {
         try {
             GetObjectRequest request = GetObjectRequest.builder()
@@ -52,6 +78,12 @@ public class DocumentStorageService {
         }
     }
 
+    /**
+     * Deletes a stored document file from object storage.
+     *
+     * @param key the storage key to delete
+     * @throws StorageException if the deletion fails
+     */
     public void delete(String key) {
         try {
             s3Client.deleteObject(DeleteObjectRequest.builder()

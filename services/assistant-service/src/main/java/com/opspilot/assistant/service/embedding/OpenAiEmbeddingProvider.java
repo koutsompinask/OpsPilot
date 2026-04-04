@@ -6,6 +6,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Embedding provider backed by the OpenAI embeddings API.
+ *
+ * <p>Requires a non-blank API key in {@code assistant.embedding.openai.api-key}; startup
+ * validation will fail fast if the key is missing and this provider is active. The default
+ * model is {@code text-embedding-3-small} (1536 dimensions).</p>
+ */
 @Component
 public class OpenAiEmbeddingProvider extends AbstractOpenAiCompatibleEmbeddingProvider {
 
@@ -21,6 +28,7 @@ public class OpenAiEmbeddingProvider extends AbstractOpenAiCompatibleEmbeddingPr
 
     @Override
     public EmbeddingProfile profile() {
+        // Profile id format: "openai:<model>:<dimensions>" — used for re-indexing detection
         return new EmbeddingProfile(
                 "openai:" + properties.getOpenai().getModel() + ":" + properties.getOpenai().getDimensions(),
                 "openai",

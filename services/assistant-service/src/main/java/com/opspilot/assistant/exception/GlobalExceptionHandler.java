@@ -10,6 +10,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Centralised exception handler for the assistant-service.
+ *
+ * Intercepts all exceptions thrown by controllers and maps them to structured
+ * {@link ApiError} responses with appropriate HTTP status codes. The generic
+ * {@link Exception} fallback returns a 500 with a non-revealing message to prevent
+ * internal details from leaking to clients.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

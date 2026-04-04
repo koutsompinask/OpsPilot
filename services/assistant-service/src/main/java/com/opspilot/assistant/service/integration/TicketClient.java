@@ -10,6 +10,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClient.RequestBodySpec;
 
+/**
+ * REST client used by the assistant-service to create support tickets in the ticket-service.
+ *
+ * Tickets are created automatically when a chat answer has a confidence score below the
+ * configured low-confidence threshold ({@code ai.chat.low-confidence-threshold}).
+ * Authentication is via the {@code X-Service-Token} header, which must match the shared
+ * {@code INTERNAL_SERVICE_TOKEN} configured across services.
+ */
 @Component
 public class TicketClient {
 
@@ -27,6 +35,12 @@ public class TicketClient {
         this.serviceToken = serviceToken;
     }
 
+    /**
+     * Creates a support ticket in the ticket-service for a low-confidence chat answer.
+     *
+     * @param request the ticket creation payload including tenant, user, question, answer, and confidence metadata
+     * @throws IllegalStateException if the ticket-service returns a non-2xx response
+     */
     public void createTicket(InternalCreateTicketRequest request) {
         String requestId = RequestCorrelation.currentRequestId();
         log.info(

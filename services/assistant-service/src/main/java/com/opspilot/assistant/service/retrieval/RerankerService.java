@@ -10,6 +10,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Provider-aware reranking service that re-scores and selects the top-K chunks from
+ * the fused retrieval candidates.
+ *
+ * <p>At construction the configured {@code reranker.provider} property determines which
+ * {@link RerankerProvider} implementation is wired in (currently only {@code tei} is
+ * supported). When the neural reranker is disabled or fails at runtime, the service
+ * transparently falls back to the {@link HeuristicReranker}, which applies token-overlap
+ * and domain-specific signal boosts without any external network call.</p>
+ *
+ * <p>The passage sent to the reranker for each chunk is constructed as
+ * {@code sectionTitle + "\n" + chunkText}, truncated to {@code reranker.max-passage-characters}
+ * to stay within the reranker model's token limit.</p>
+ */
 @Service
 public class RerankerService {
 
@@ -32,6 +46,17 @@ public class RerankerService {
         this.heuristicReranker = heuristicReranker;
     }
 
+    /**
+     * Re-scores and trims the candidate list to the top-{@code topK} most relevant chunks.
+     *
+     * <p>If the neural reranker is disabled or throws an exception, the heuristic fallback
+     * is applied automatically so the method always returns a ranked result.</p>
+     *
+     * @param question   the user's question used as the reference text for relevance scoring
+     * @param candidates the fused retrieval candidates to re-score
+     * @param topK       the maximum number of chunks to return
+     * @return the top-K chunks sorted by reranker score descending, with ties broken by retrieval score
+     */
     public List<RetrievedChunk> rerank(String question, List<RetrievedChunk> candidates, int topK) {
         if (candidates.isEmpty()) {
             return List.of();
@@ -41,6 +66,8 @@ public class RerankerService {
             return applyFallback(question, candidates, topK, "disabled");
         }
 
+        // Cap the number of passages sent to the reranker at the configured candidateLimit
+        // to control latency; the RRF-fused order already surfaces the best candidates first.
         List<RetrievedChunk> limitedCandidates = candidates.stream()
                 .limit(Math.max(topK, properties.getCandidateLimit()))
                 .toList();
@@ -88,6 +115,14 @@ public class RerankerService {
         }
     }
 
+    /**
+     * Calls the reranker with a fixed two-passage sample to verify connectivity and model behaviour.
+     *
+     * <p>Used by {@link RerankerStartupValidator} at application startup to fail fast if the
+     * reranker endpoint is unreachable or returns unexpected results.</p>
+     *
+     * @return the raw reranker scores for the two sample passages
+     */
     public List<RerankResult> validateSample() {
         return provider.rerank(
                 "What time is check-in and check-out?",
@@ -98,14 +133,20 @@ public class RerankerService {
         );
     }
 
+    /**
+     * Returns {@code true} if the neural reranker is enabled in configuration.
+     * When disabled, every rerank call falls through to the heuristic reranker.
+     */
     public boolean isEnabled() {
         return properties.isEnabled();
     }
 
+    /** Returns the name of the active reranker provider (e.g. {@code tei}). */
     public String providerName() {
         return provider.providerName();
     }
 
+    /** Returns the model identifier reported by the active reranker provider. */
     public String modelName() {
         return provider.modelName();
     }

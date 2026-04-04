@@ -11,6 +11,18 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * JPA entity representing a tenant-scoped knowledge document.
+ *
+ * A document moves through the lifecycle: {@code PROCESSING} (upload accepted, ingestion running)
+ * → {@code READY} (chunks embedded and indexed) or {@code FAILED} (ingestion error).
+ * State transitions are encapsulated in {@link #markReady}, {@link #markFailed}, and
+ * {@link #markProcessing}.
+ *
+ * The {@code storageKey} field is the MinIO object key where the raw file is stored.
+ * The {@code embeddingProfile} identifies which embedding model configuration was used,
+ * enabling detection of documents that need re-indexing after a profile change.
+ */
 @Entity
 @Table(name = "documents", schema = "assistant")
 public class Document {
@@ -55,6 +67,10 @@ public class Document {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /**
+     * Factory method — creates a new document record in {@code PROCESSING} state immediately
+     * after the file is uploaded and before async ingestion begins.
+     */
     public static Document processing(
             UUID id,
             UUID tenantId,
@@ -91,6 +107,7 @@ public class Document {
         updatedAt = Instant.now();
     }
 
+    /** Transitions the document to {@code READY} after successful ingestion and indexing. */
     public void markReady(int chunkCount, String embeddingProfile) {
         this.status = DocumentStatus.READY;
         this.chunkCount = chunkCount;
@@ -98,11 +115,13 @@ public class Document {
         this.errorMessage = null;
     }
 
+    /** Transitions the document to {@code FAILED} and records the error message. */
     public void markFailed(String errorMessage) {
         this.status = DocumentStatus.FAILED;
         this.errorMessage = errorMessage;
     }
 
+    /** Resets the document to {@code PROCESSING} state, used when re-triggering ingestion. */
     public void markProcessing(String requestId) {
         this.status = DocumentStatus.PROCESSING;
         this.chunkCount = 0;

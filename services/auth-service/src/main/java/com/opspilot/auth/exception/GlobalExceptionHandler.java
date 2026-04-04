@@ -10,6 +10,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Centralised exception handler for the auth-service.
+ *
+ * Maps all thrown exceptions to structured {@link ApiError} responses. The
+ * {@link UpstreamServiceException} handler returns 502 to signal that a downstream
+ * dependency (tenant-service) failed. The generic fallback returns a 500 with a
+ * non-revealing message.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

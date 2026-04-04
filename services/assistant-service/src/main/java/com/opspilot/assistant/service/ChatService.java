@@ -19,6 +19,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+/**
+ * Orchestrates the full RAG (Retrieval-Augmented Generation) pipeline for a single chat query.
+ *
+ * <p>Processing order per request:
+ * <ol>
+ *   <li>Ensure the tenant's documents are indexed under the active embedding profile,
+ *       scheduling re-indexing if the profile has changed.</li>
+ *   <li>Embed the question and retrieve the top-K most relevant chunks via hybrid
+ *       vector + lexical search followed by neural reranking.</li>
+ *   <li>Generate a natural-language answer from the ranked evidence chunks using the
+ *       configured {@link AnswerService} provider.</li>
+ *   <li>Compute a confidence score and, if it falls below the configured threshold,
+ *       automatically escalate by creating a support ticket via {@link TicketClient}.</li>
+ * </ol>
+ * </p>
+ */
 @Service
 public class ChatService {
 
@@ -50,6 +66,22 @@ public class ChatService {
         this.lowConfidenceThreshold = lowConfidenceThreshold;
     }
 
+    /**
+     * Executes the full RAG pipeline for a user question and returns the answer with evidence.
+     *
+     * <p>If the active embedding profile has changed since documents were last indexed,
+     * re-indexing is triggered automatically before retrieval. When no ready documents
+     * exist yet under the new profile (re-indexing still in progress), a placeholder
+     * response is returned immediately instead of attempting retrieval against an empty index.</p>
+     *
+     * @param user           the authenticated caller, used for tenant scoping and ticket creation
+     * @param question       the natural-language question; {@code null} is treated as an empty string
+     * @param requestedTopK  the number of evidence chunks to retrieve; must be 1–10 or {@code null}
+     *                       to fall back to the default configured by {@code ai.chat.default-top-k}
+     * @return the complete chat response including answer text, confidence score, sources,
+     *         evidence snippets, and a flag indicating whether a support ticket was created
+     * @throws com.opspilot.assistant.exception.BadRequestException if {@code requestedTopK} is outside the valid range
+     */
     public ChatAskResponse ask(CurrentUser user, String question, Integer requestedTopK) {
         int topK = normalizeTopK(requestedTopK);
         String normalizedQuestion = question == null ? "" : question.trim();
@@ -69,6 +101,8 @@ public class ChatService {
         String activeProfile = embeddingService.profile().id();
         List<RetrievedChunk> chunks = chunkRetrievalService.retrieve(user.tenantId(), normalizedQuestion, topK);
 
+        // If re-indexing was just scheduled and no documents are ready under the new profile yet,
+        // skip retrieval and return a "retry later" response rather than returning empty results.
         if (chunks.isEmpty() && refreshResult.scheduledCount() > 0 && refreshResult.readyDocumentCount() == 0) {
             log.info(
                     "ai_chat_reindex_in_progress tenantId={} userId={} scheduledCount={} profile={}",
@@ -91,6 +125,9 @@ public class ChatService {
         AnswerGenerationResult answer = answerService.generate(normalizedQuestion, chunks);
 
         double confidence = computeConfidence(chunks, answer);
+        // Treat the answer as low-confidence if the numeric score is below the threshold OR
+        // if the answer generator explicitly signalled that it lacked sufficient evidence.
+        // Configured via ai.chat.low-confidence-threshold (default 0.55).
         boolean lowConfidence = confidence < lowConfidenceThreshold || "insufficient-evidence".equals(answer.answerMode());
         boolean ticketCreated = false;
 
@@ -148,6 +185,9 @@ public class ChatService {
             return 0.0;
         }
 
+        // Average the reranker scores of the top-3 chunks (or fewer if less were retrieved).
+        // Using only the top-3 rather than all chunks avoids diluting the score with weak
+        // tail evidence that the reranker already ranked low.
         int sampleSize = Math.min(3, chunks.size());
         double total = 0.0;
         for (int i = 0; i < sampleSize; i++) {
@@ -155,6 +195,7 @@ public class ChatService {
         }
 
         double avg = total / sampleSize;
+        // Clamp to [0.0, 1.0] and round to 3 decimal places for a stable, display-friendly value
         double normalized = Math.max(0.0, Math.min(1.0, avg));
         return Math.round(normalized * 1000.0) / 1000.0;
     }
@@ -164,6 +205,8 @@ public class ChatService {
             return "";
         }
         String normalized = text.replaceAll("\\s+", " ").trim();
+        // 240-char cap keeps evidence snippets readable in the UI without truncating too aggressively;
+        // the trailing "..." makes truncation visible to the end user.
         if (normalized.length() <= 240) {
             return normalized;
         }

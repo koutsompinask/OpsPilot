@@ -22,6 +22,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST controller exposing the public ticket management API under {@code /tickets}.
+ *
+ * <p>All endpoints require a valid JWT bearer token. Tenant isolation is enforced by scoping
+ * every operation to the {@link CurrentUser#tenantId()} extracted from the token — users never
+ * see or modify tickets belonging to other tenants. Write operations (create, status update) are
+ * further restricted to users with the {@link com.opspilot.ticket.domain.entity.Role#TENANT_ADMIN}
+ * role.</p>
+ */
 @RestController
 @RequestMapping("/tickets")
 public class TicketController {
@@ -34,22 +43,55 @@ public class TicketController {
         this.currentUserResolver = currentUserResolver;
     }
 
+    /**
+     * Returns all tickets belonging to the caller's tenant, ordered by creation time descending.
+     *
+     * @param jwt the verified JWT principal injected by Spring Security
+     * @return list of ticket responses scoped to the caller's tenant
+     */
     @GetMapping
     public List<TicketResponse> list(@AuthenticationPrincipal Jwt jwt) {
         CurrentUser currentUser = currentUserResolver.fromJwt(jwt);
         return ticketService.list(currentUser);
     }
 
+    /**
+     * Creates a new ticket manually on behalf of the authenticated tenant admin.
+     *
+     * <p>Only tenant admins may create manual tickets. Regular members must rely on the
+     * auto-escalation path via the assistant-service instead.</p>
+     *
+     * @param jwt     the verified JWT principal injected by Spring Security
+     * @param request the ticket creation payload, validated before processing
+     * @return the newly created ticket, HTTP 201
+     * @throws ForbiddenException if the caller does not hold the TENANT_ADMIN role
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TicketResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateTicketRequest request) {
         CurrentUser currentUser = currentUserResolver.fromJwt(jwt);
+        // Only admins can raise tickets manually; members interact via the chat interface
         if (!currentUser.isAdmin()) {
             throw new ForbiddenException("Only tenant admins can create manual tickets");
         }
         return ticketService.createManual(currentUser, request);
     }
 
+    /**
+     * Updates the status of an existing ticket.
+     *
+     * <p>Status updates are restricted to tenant admins because status transitions represent
+     * operational decisions (e.g., marking a ticket resolved) that regular users should not
+     * be able to perform unilaterally.</p>
+     *
+     * @param jwt      the verified JWT principal injected by Spring Security
+     * @param ticketId the UUID of the ticket to update
+     * @param request  the new status, validated before processing
+     * @return the updated ticket
+     * @throws ForbiddenException if the caller does not hold the TENANT_ADMIN role
+     * @throws com.opspilot.ticket.exception.NotFoundException if no ticket with the given ID
+     *         exists within the caller's tenant
+     */
     @PatchMapping("/{ticketId}/status")
     public TicketResponse updateStatus(
             @AuthenticationPrincipal Jwt jwt,
@@ -57,6 +99,7 @@ public class TicketController {
             @Valid @RequestBody UpdateTicketStatusRequest request
     ) {
         CurrentUser currentUser = currentUserResolver.fromJwt(jwt);
+        // Status changes reflect workflow decisions — only admins are authorised to make them
         if (!currentUser.isAdmin()) {
             throw new ForbiddenException("Only tenant admins can update ticket status");
         }

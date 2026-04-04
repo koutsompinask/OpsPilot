@@ -11,6 +11,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClient.RequestBodySpec;
 
+/**
+ * REST client that calls the tenant-service to bootstrap a new tenant during registration.
+ *
+ * After auth-service creates the admin user's credentials, it calls
+ * {@code POST /internal/tenants/bootstrap} on the tenant-service to create the tenant profile
+ * and admin user profile. Authentication uses the shared {@code X-Service-Token} header.
+ */
 @Component
 public class TenantClient {
 
@@ -27,6 +34,12 @@ public class TenantClient {
         this.serviceToken = serviceToken;
     }
 
+    /**
+     * Calls the tenant-service internal bootstrap endpoint to initialise the tenant and admin profile.
+     *
+     * @param request the bootstrap payload containing the new tenant and admin user details
+     * @throws com.opspilot.auth.exception.UpstreamServiceException if the tenant-service returns a non-2xx response
+     */
     public void bootstrapTenant(TenantBootstrapRequest request) {
         String requestId = MDC.get(RequestCorrelation.MDC_KEY);
         log.info("tenant_client_bootstrap_request tenantId={} adminUserId={}", request.tenantId(), request.adminUserId());

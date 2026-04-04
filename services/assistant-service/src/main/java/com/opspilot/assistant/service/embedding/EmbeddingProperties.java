@@ -6,6 +6,13 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * Configuration properties for the embedding subsystem, bound from the {@code assistant.embedding} prefix.
+ *
+ * <p>Contains nested blocks for each supported provider ({@code stub}, {@code openai}, {@code tei},
+ * {@code ollama}). Only the block matching the active {@link #getProvider()} value is actually used
+ * at runtime; the others are parsed but ignored.</p>
+ */
 @Validated
 @ConfigurationProperties(prefix = "assistant.embedding")
 public class EmbeddingProperties {

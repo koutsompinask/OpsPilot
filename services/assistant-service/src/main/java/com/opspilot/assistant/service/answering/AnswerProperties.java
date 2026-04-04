@@ -2,6 +2,14 @@ package com.opspilot.assistant.service.answering;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * Configuration properties for the answer-generation provider, bound from {@code ai.answer.*}.
+ *
+ * {@code provider} selects the active {@link AnswerGenerator} implementation:
+ * {@code "ollama"} (default), {@code "openai"}, or {@code "local"} (deterministic stub).
+ * Provider-specific settings are nested under {@code ai.answer.ollama.*} and
+ * {@code ai.answer.openai.*}.
+ */
 @ConfigurationProperties(prefix = "ai.answer")
 public class AnswerProperties {
 

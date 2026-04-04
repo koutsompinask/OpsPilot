@@ -8,6 +8,19 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
+/**
+ * A rule-based fallback reranker used when the TEI reranker is disabled or unavailable.
+ *
+ * Scores each candidate chunk using a weighted combination of:
+ * <ul>
+ *   <li>Token overlap between the question and chunk text (after stopword removal)</li>
+ *   <li>Exact phrase matching for compound terms (e.g. "check-in and check-out")</li>
+ *   <li>Domain-specific signals: time expressions, check-in/check-out mentions</li>
+ *   <li>Section title relevance</li>
+ *   <li>The original vector distance and lexical score from retrieval</li>
+ * </ul>
+ * Raw scores are normalised via a sigmoid function to produce values in (0, 1).
+ */
 @Component
 public class HeuristicReranker {
 
@@ -18,6 +31,13 @@ public class HeuristicReranker {
             "when", "where", "which", "who", "with", "your"
     );
 
+    /**
+     * Reranks the given candidate chunks relative to the question using heuristic scoring.
+     *
+     * @param question   the user's original question
+     * @param candidates the candidate chunks to score, in their original retrieval order
+     * @return a list of {@link RerankResult} objects containing each chunk's original index and normalised score
+     */
     public List<RerankResult> rerank(String question, List<RetrievedChunk> candidates) {
         Set<String> questionTokens = tokenize(question);
         return java.util.stream.IntStream.range(0, candidates.size())

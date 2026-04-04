@@ -12,6 +12,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Detects and repairs embedding-profile drift for a tenant's document index.
+ *
+ * <p>When the active embedding profile changes (e.g. the operator switches from a local
+ * deterministic model to a production-grade TEI model), existing document chunks are
+ * still stored under the old profile's vectors and will not be retrieved by queries
+ * encoded with the new profile. This service detects such stale documents and
+ * re-triggers the ingestion pipeline for each of them so they are re-chunked and
+ * re-embedded under the new profile. The check is performed on every chat request,
+ * before retrieval, so the first query after a profile switch transparently initiates
+ * the background migration.</p>
+ */
 @Service
 public class DocumentEmbeddingMaintenanceService {
 
@@ -31,11 +43,26 @@ public class DocumentEmbeddingMaintenanceService {
         this.embeddingService = embeddingService;
     }
 
+    /**
+     * Ensures that all of the tenant's documents are indexed under the currently active
+     * embedding profile, scheduling re-ingestion for any that are not.
+     *
+     * <p>Documents already in {@code PROCESSING} status are skipped to avoid duplicate
+     * concurrent ingestion runs for the same document.</p>
+     *
+     * @param tenantId  the tenant whose document index should be checked
+     * @param requestId the correlation ID from the originating chat request, propagated
+     *                  into the async re-ingestion tasks for end-to-end tracing
+     * @return a summary containing the number of documents scheduled for re-ingestion
+     *         and the count of documents already {@code READY} under the active profile
+     */
     @Transactional
     public EmbeddingIndexRefreshResult ensureCurrentProfile(UUID tenantId, String requestId) {
         String normalizedRequestId = RequestCorrelation.normalizeOrGenerate(requestId);
         String activeProfile = embeddingService.profile().id();
 
+        // Find documents whose stored embedding_profile differs from the currently active one.
+        // Skip any that are already being processed to avoid double-scheduling.
         List<Document> outdated = documentRepository.findByTenantIdAndEmbeddingProfileNotOrderByCreatedAtAsc(tenantId, activeProfile)
                 .stream()
                 .filter(document -> document.getStatus() != DocumentStatus.PROCESSING)

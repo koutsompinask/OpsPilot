@@ -11,6 +11,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * {@link AnswerGenerator} implementation that calls the OpenAI Chat Completions API to
+ * produce grounded answers.
+ *
+ * The generator builds a system + user message pair from the retrieved chunks and posts it
+ * to the configured OpenAI endpoint. The response is expected to contain JSON with
+ * {@code "answer"} and {@code "reasoningSummary"} fields; if parsing fails, the raw content
+ * is used as the answer.
+ *
+ * This generator requires an API key in {@code ai.answer.openai.api-key}. Attempting to
+ * call it without a key throws {@link IllegalStateException}. Configured via
+ * {@code ai.answer.openai.*} (model, URL, key, timeout).
+ */
 @Component
 public class OpenAiAnswerGenerator implements AnswerGenerator {
 
@@ -22,6 +35,11 @@ public class OpenAiAnswerGenerator implements AnswerGenerator {
         this.properties = properties;
     }
 
+    /**
+     * Returns {@code true} if an API key has been configured, indicating this generator can be used.
+     *
+     * @return {@code true} if {@code ai.answer.openai.api-key} is set and non-blank
+     */
     public boolean isConfigured() {
         String apiKey = properties.getOpenai().getApiKey();
         return apiKey != null && !apiKey.isBlank();

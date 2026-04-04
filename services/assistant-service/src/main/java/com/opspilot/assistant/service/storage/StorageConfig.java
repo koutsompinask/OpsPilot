@@ -10,10 +10,22 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
+/**
+ * Spring configuration that provisions the AWS S3 client used to communicate with MinIO.
+ *
+ * Path-style access is forced ({@code pathStyleAccessEnabled=true}) because MinIO does not
+ * support virtual-hosted-style bucket addressing in local deployments.
+ */
 @Configuration
 @EnableConfigurationProperties(StorageProperties.class)
 public class StorageConfig {
 
+    /**
+     * Creates an {@link S3Client} pointed at the configured MinIO endpoint.
+     *
+     * @param properties storage connection properties bound from {@code assistant.storage.*}
+     * @return a fully configured S3-compatible client
+     */
     @Bean
     public S3Client s3Client(StorageProperties properties) {
         return S3Client.builder()
