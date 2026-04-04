@@ -63,6 +63,12 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_GATEWAY, "STORAGE_ERROR", ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiError> handleServiceUnavailable(ServiceUnavailableException ex, HttpServletRequest request) {
+        log.error("assistant_provider_unavailable path={} message={}", request.getRequestURI(), ex.getMessage(), ex);
+        return response(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("assistant_internal_error path={} message={}", request.getRequestURI(), ex.getMessage(), ex);

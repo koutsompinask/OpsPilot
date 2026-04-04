@@ -5,6 +5,7 @@ import com.opspilot.assistant.dto.ChatEvidenceResponse;
 import com.opspilot.assistant.dto.ChatSourceResponse;
 import com.opspilot.assistant.dto.InternalCreateTicketRequest;
 import com.opspilot.assistant.exception.BadRequestException;
+import com.opspilot.assistant.exception.ServiceUnavailableException;
 import com.opspilot.assistant.repository.RetrievedChunk;
 import com.opspilot.assistant.security.CurrentUser;
 import com.opspilot.assistant.service.answering.AnswerGenerationResult;
@@ -94,12 +95,24 @@ public class ChatService {
                 topK
         );
 
-        EmbeddingIndexRefreshResult refreshResult = documentEmbeddingMaintenanceService.ensureCurrentProfile(
-                user.tenantId(),
-                RequestCorrelation.currentRequestId()
-        );
+        EmbeddingIndexRefreshResult refreshResult;
+        try {
+            refreshResult = documentEmbeddingMaintenanceService.ensureCurrentProfile(
+                    user.tenantId(),
+                    RequestCorrelation.currentRequestId()
+            );
+        } catch (Exception ex) {
+            throw new ServiceUnavailableException("Embedding service unavailable — unable to verify index profile", ex);
+        }
+
         String activeProfile = embeddingService.profile().id();
-        List<RetrievedChunk> chunks = chunkRetrievalService.retrieve(user.tenantId(), normalizedQuestion, topK);
+
+        List<RetrievedChunk> chunks;
+        try {
+            chunks = chunkRetrievalService.retrieve(user.tenantId(), normalizedQuestion, topK);
+        } catch (Exception ex) {
+            throw new ServiceUnavailableException("Embedding service unavailable — unable to encode query for retrieval", ex);
+        }
 
         // If re-indexing was just scheduled and no documents are ready under the new profile yet,
         // skip retrieval and return a "retry later" response rather than returning empty results.
@@ -122,7 +135,12 @@ public class ChatService {
             );
         }
 
-        AnswerGenerationResult answer = answerService.generate(normalizedQuestion, chunks);
+        AnswerGenerationResult answer;
+        try {
+            answer = answerService.generate(normalizedQuestion, chunks);
+        } catch (Exception ex) {
+            throw new ServiceUnavailableException("LLM provider unavailable — unable to generate answer", ex);
+        }
 
         double confidence = computeConfidence(chunks, answer);
         // Treat the answer as low-confidence if the numeric score is below the threshold OR
