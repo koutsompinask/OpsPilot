@@ -51,5 +51,5 @@ management:
 
 gateway:
   jwt:
-    secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
+    secret: ${JWT_SECRET}
     issuer: ${JWT_ISSUER:opspilot-auth-service}

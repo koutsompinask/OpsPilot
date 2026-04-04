@@ -28,11 +28,11 @@ management:
 
 auth:
   jwt:
-    secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
+    secret: ${JWT_SECRET}
     issuer: opspilot-auth-service
     access-token-ttl: PT15M
     refresh-token-ttl: P14D
-  service-token: ${INTERNAL_SERVICE_TOKEN:opspilot-internal-dev-token}
+  service-token: ${INTERNAL_SERVICE_TOKEN}
 
 tenant-service:
   base-url: ${TENANT_SERVICE_BASE_URL:http://localhost:8082}

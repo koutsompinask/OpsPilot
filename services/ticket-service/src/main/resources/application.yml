@@ -20,7 +20,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          secret: ${JWT_SECRET:change-me-to-a-long-secret-for-local-dev-only}
+          secret: ${JWT_SECRET}
           issuer: ${JWT_ISSUER:opspilot-auth-service}
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
@@ -38,7 +38,7 @@ management:
         include: health,info
 
 ticket:
-  service-token: ${INTERNAL_SERVICE_TOKEN:opspilot-internal-dev-token}
+  service-token: ${INTERNAL_SERVICE_TOKEN}
   messaging:
     enabled: ${TICKET_MESSAGING_ENABLED:true}
     ticket-created-exchange: ${TICKET_CREATED_EXCHANGE:opspilot.events}
