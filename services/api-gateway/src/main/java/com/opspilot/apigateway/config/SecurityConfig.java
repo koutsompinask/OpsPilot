@@ -38,6 +38,9 @@ public class SecurityConfig {
      *   <li>Actuator {@code /health} and {@code /info} are public so that container
      *       orchestrators (e.g. Kubernetes liveness/readiness probes) can poll them
      *       without needing to supply a service token.</li>
+     *   <li>{@code /internal/**} is unconditionally denied — these paths are reserved for
+     *       service-to-service communication and must never be reachable from the public
+     *       internet, regardless of whether a valid JWT is present.</li>
      *   <li>Every other path requires a valid JWT bearer token.</li>
      * </ol>
      *
@@ -60,6 +63,10 @@ public class SecurityConfig {
                         // /auth/** is public: login and registration requests arrive without a token
                         // Actuator health/info endpoints are open for liveness and readiness probes
                         .pathMatchers("/auth/**", "/actuator/health", "/actuator/info").permitAll()
+                        // /internal/** is for service-to-service calls only; deny unconditionally at the
+                        // gateway so these endpoints are never reachable from the public internet even
+                        // if a route accidentally exposes them
+                        .pathMatchers("/internal/**").denyAll()
                         // All remaining routes require a valid JWT issued by auth-service
                         .anyExchange().authenticated())
                 .exceptionHandling(exceptions -> exceptions
