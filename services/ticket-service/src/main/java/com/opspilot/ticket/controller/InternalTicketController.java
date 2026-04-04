@@ -7,6 +7,8 @@ import com.opspilot.ticket.service.TicketService;
 import com.opspilot.ticket.util.logging.RequestCorrelation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,8 +66,11 @@ public class InternalTicketController {
             @Valid @RequestBody InternalCreateTicketRequest request,
             HttpServletRequest httpRequest
     ) {
-        // Service-token check: reject the request immediately if the token is wrong or missing
-        if (!serviceToken.equals(providedToken)) {
+        // Constant-time comparison prevents timing attacks that could be used to brute-force
+        // the service token by measuring how long the comparison takes character-by-character
+        byte[] expected = serviceToken.getBytes(StandardCharsets.UTF_8);
+        byte[] actual = providedToken != null ? providedToken.getBytes(StandardCharsets.UTF_8) : new byte[0];
+        if (!MessageDigest.isEqual(expected, actual)) {
             throw new ForbiddenException("Invalid service token");
         }
         // Forward the correlation ID so the ticket can be linked to the originating chat request

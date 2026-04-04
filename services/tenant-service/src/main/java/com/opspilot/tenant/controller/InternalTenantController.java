@@ -4,6 +4,8 @@ import com.opspilot.tenant.dto.InternalBootstrapTenantRequest;
 import com.opspilot.tenant.exception.ForbiddenException;
 import com.opspilot.tenant.service.TenantService;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,8 +56,11 @@ public class InternalTenantController {
             @RequestHeader(name = "X-Service-Token", required = false) String providedToken,
             @Valid @RequestBody InternalBootstrapTenantRequest request
     ) {
-        // Validate the shared service token before processing — this is the only auth mechanism for /internal endpoints
-        if (!serviceToken.equals(providedToken)) {
+        // Constant-time comparison prevents timing attacks that could be used to brute-force
+        // the service token by measuring how long the comparison takes character-by-character
+        byte[] expected = serviceToken.getBytes(StandardCharsets.UTF_8);
+        byte[] actual = providedToken != null ? providedToken.getBytes(StandardCharsets.UTF_8) : new byte[0];
+        if (!MessageDigest.isEqual(expected, actual)) {
             throw new ForbiddenException("Invalid service token");
         }
         tenantService.bootstrapTenant(request);

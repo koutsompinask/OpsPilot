@@ -5,6 +5,8 @@ import com.opspilot.auth.dto.InternalCreateUserResponse;
 import com.opspilot.auth.exception.ForbiddenException;
 import com.opspilot.auth.service.AuthService;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,8 +59,11 @@ public class InternalAuthController {
             @RequestHeader(name = "X-Service-Token", required = false) String providedToken,
             @Valid @RequestBody InternalCreateUserRequest request
     ) {
-        // Guard: reject the call immediately if the service token is absent or incorrect
-        if (!serviceToken.equals(providedToken)) {
+        // Constant-time comparison prevents timing attacks that could be used to brute-force
+        // the service token by measuring how long the comparison takes character-by-character
+        byte[] expected = serviceToken.getBytes(StandardCharsets.UTF_8);
+        byte[] actual = providedToken != null ? providedToken.getBytes(StandardCharsets.UTF_8) : new byte[0];
+        if (!MessageDigest.isEqual(expected, actual)) {
             throw new ForbiddenException("Invalid service token");
         }
         return authService.createInternalUser(request);
