@@ -22,6 +22,7 @@ public class EmbeddingService {
             TeiEmbeddingProvider teiProvider,
             OllamaEmbeddingProvider ollamaProvider,
             OpenAiEmbeddingProvider openAiProvider,
+            GeminiEmbeddingProvider geminiProvider,
             @Value("${assistant.embedding.provider:stub}") String providerType
     ) {
         // Select the active provider based on configuration; fail fast on unknown values
@@ -29,6 +30,7 @@ public class EmbeddingService {
             case "tei" -> teiProvider;
             case "ollama" -> ollamaProvider;
             case "openai" -> openAiProvider;
+            case "gemini" -> geminiProvider;
             case "stub", "local" -> localProvider;
             default -> throw new IllegalArgumentException("Unsupported embedding provider: " + providerType);
         };

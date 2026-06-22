@@ -36,11 +36,13 @@ public class RerankerService {
     public RerankerService(
             RerankerProperties properties,
             TeiRerankerProvider teiRerankerProvider,
+            GeminiReranker geminiReranker,
             HeuristicReranker heuristicReranker
     ) {
         this.properties = properties;
         this.provider = switch (properties.getProvider().toLowerCase(Locale.ROOT)) {
             case "tei" -> teiRerankerProvider;
+            case "gemini" -> geminiReranker;
             default -> throw new IllegalArgumentException("Unsupported reranker provider: " + properties.getProvider());
         };
         this.heuristicReranker = heuristicReranker;

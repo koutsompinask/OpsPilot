@@ -15,26 +15,21 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * {@link AnswerGenerator} implementation that calls the OpenAI Chat Completions API to
- * produce grounded answers.
+ * {@link AnswerGenerator} backed by the Gemini API (AI Studio) using its OpenAI-compatible
+ * {@code /chat/completions} endpoint.
  *
- * The generator builds a system + user message pair from the retrieved chunks and posts it
- * to the configured OpenAI endpoint. The response is expected to contain JSON with
- * {@code "answer"} and {@code "reasoningSummary"} fields; if parsing fails, the raw content
- * is used as the answer.
- *
- * This generator requires an API key in {@code ai.answer.openai.api-key}. Attempting to
- * call it without a key throws {@link IllegalStateException}. Configured via
- * {@code ai.answer.openai.*} (model, URL, key, timeout).
+ * <p>Uses {@code response_format: json_object} to guarantee structured output, and parses
+ * the {@code "answer"} and {@code "reasoningSummary"} fields with Jackson via {@link LlmJson}.
+ * Requires a non-blank API key in {@code ai.answer.gemini.api-key}.</p>
  */
 @Component
-public class OpenAiAnswerGenerator implements AnswerGenerator {
+public class GeminiAnswerGenerator implements AnswerGenerator {
 
     private final RestTemplate restTemplate;
     private final AnswerProperties properties;
     private final ObjectMapper objectMapper;
 
-    public OpenAiAnswerGenerator(
+    public GeminiAnswerGenerator(
             @Qualifier("answerRestTemplate") RestTemplate answerRestTemplate,
             AnswerProperties properties,
             ObjectMapper objectMapper
@@ -45,19 +40,17 @@ public class OpenAiAnswerGenerator implements AnswerGenerator {
     }
 
     /**
-     * Returns {@code true} if an API key has been configured, indicating this generator can be used.
-     *
-     * @return {@code true} if {@code ai.answer.openai.api-key} is set and non-blank
+     * Returns {@code true} if a Gemini API key has been configured.
      */
     public boolean isConfigured() {
-        String apiKey = properties.getOpenai().getApiKey();
+        String apiKey = properties.getGemini().getApiKey();
         return apiKey != null && !apiKey.isBlank();
     }
 
     @Override
     public AnswerGenerationResult generate(String question, List<RetrievedChunk> chunks) {
         if (!isConfigured()) {
-            throw new IllegalStateException("OpenAI answer provider is not configured");
+            throw new IllegalStateException("Gemini answer provider is not configured");
         }
 
         String context = chunks.stream()
@@ -82,7 +75,7 @@ public class OpenAiAnswerGenerator implements AnswerGenerator {
                 """.formatted(question, context);
 
         ChatCompletionRequest request = new ChatCompletionRequest(
-                properties.getOpenai().getModel(),
+                properties.getGemini().getModel(),
                 List.of(
                         new ChatMessage("system", "You are OpsPilot assistant. Provide concise grounded answers in JSON."),
                         new ChatMessage("user", userPrompt)
@@ -93,31 +86,32 @@ public class OpenAiAnswerGenerator implements AnswerGenerator {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(properties.getOpenai().getApiKey());
+        headers.setBearerAuth(properties.getGemini().getApiKey());
         headers.set(RequestCorrelation.HEADER_NAME, RequestCorrelation.currentRequestId());
 
         ResponseEntity<ChatCompletionResponse> response = restTemplate.postForEntity(
-                properties.getOpenai().getUrl(),
+                properties.getGemini().getUrl(),
                 new HttpEntity<>(request, headers),
                 ChatCompletionResponse.class
         );
 
         ChatCompletionResponse body = response.getBody();
         if (body == null || body.choices() == null || body.choices().isEmpty()) {
-            throw new IllegalStateException("Unexpected chat response from OpenAI");
+            throw new IllegalStateException("Unexpected chat response from Gemini");
         }
 
-        String content = body.choices().getFirst().message() == null ? null : body.choices().getFirst().message().content();
+        String content = body.choices().getFirst().message() == null ? null
+                : body.choices().getFirst().message().content();
         if (content == null || content.isBlank()) {
-            throw new IllegalStateException("OpenAI chat response did not include answer content");
+            throw new IllegalStateException("Gemini chat response did not include answer content");
         }
 
         String answer = LlmJson.extractField(objectMapper, content, "answer");
         String reasoningSummary = LlmJson.extractField(objectMapper, content, "reasoningSummary");
         return new AnswerGenerationResult(
                 answer == null ? content.trim() : answer,
-                reasoningSummary == null ? "Generated from grounded evidence returned by the chat model." : reasoningSummary,
-                "openai",
+                reasoningSummary == null ? "Generated from grounded evidence returned by the Gemini model." : reasoningSummary,
+                "gemini",
                 "llm-grounded"
         );
     }

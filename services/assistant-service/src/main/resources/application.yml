@@ -61,9 +61,14 @@ assistant:
       model: ${ASSISTANT_EMBEDDING_OLLAMA_MODEL:nomic-embed-text}
       url: ${ASSISTANT_EMBEDDING_OLLAMA_URL:http://localhost:11434/api/embed}
       dimensions: ${ASSISTANT_EMBEDDING_OLLAMA_DIMENSIONS:768}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${ASSISTANT_EMBEDDING_GEMINI_MODEL:gemini-embedding-001}
+      url: ${ASSISTANT_EMBEDDING_GEMINI_URL:https://generativelanguage.googleapis.com/v1beta/openai/embeddings}
+      dimensions: ${ASSISTANT_EMBEDDING_GEMINI_DIMENSIONS:1536}
   chunking:
-    chunk-size: ${ASSISTANT_CHUNK_SIZE:420}
-    chunk-overlap: ${ASSISTANT_CHUNK_OVERLAP:1}
+    chunk-size: ${ASSISTANT_CHUNK_SIZE:1000}
+    chunk-overlap: ${ASSISTANT_CHUNK_OVERLAP:2}
   reranker:
     enabled: ${ASSISTANT_RERANKER_ENABLED:true}
     provider: ${ASSISTANT_RERANKER_PROVIDER:tei}
@@ -74,6 +79,10 @@ assistant:
     tei:
       model: ${ASSISTANT_RERANKER_TEI_MODEL:BAAI/bge-reranker-base}
       url: ${ASSISTANT_RERANKER_TEI_URL:http://localhost:8092/rerank}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${ASSISTANT_RERANKER_GEMINI_MODEL:gemini-2.5-flash}
+      url: ${ASSISTANT_RERANKER_GEMINI_URL:https://generativelanguage.googleapis.com/v1beta/openai/chat/completions}
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
     region: ${S3_REGION:us-east-1}
@@ -105,6 +114,10 @@ ai:
     ollama:
       model: ${AI_ANSWER_OLLAMA_MODEL:qwen2.5:7b-instruct}
       url: ${AI_ANSWER_OLLAMA_URL:http://localhost:11434/api/generate}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${AI_ANSWER_GEMINI_MODEL:gemini-2.5-flash}
+      url: ${AI_ANSWER_GEMINI_URL:https://generativelanguage.googleapis.com/v1beta/openai/chat/completions}
 
 ticket-service:
   base-url: ${TICKET_SERVICE_BASE_URL:http://localhost:8085}

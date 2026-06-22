@@ -37,6 +37,9 @@ public class EmbeddingProperties {
     @Valid
     private final Ollama ollama = new Ollama();
 
+    @Valid
+    private final Gemini gemini = new Gemini();
+
     public String getProvider() {
         return provider;
     }
@@ -75,6 +78,10 @@ public class EmbeddingProperties {
 
     public Ollama getOllama() {
         return ollama;
+    }
+
+    public Gemini getGemini() {
+        return gemini;
     }
 
     public static class Stub {
@@ -183,6 +190,52 @@ public class EmbeddingProperties {
 
         @Min(1)
         private int dimensions = 768;
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public int getDimensions() {
+            return dimensions;
+        }
+
+        public void setDimensions(int dimensions) {
+            this.dimensions = dimensions;
+        }
+    }
+
+    public static class Gemini {
+
+        private String apiKey = "";
+
+        @NotBlank
+        private String model = "gemini-embedding-001";
+
+        @NotBlank
+        private String url = "https://generativelanguage.googleapis.com/v1beta/openai/embeddings";
+
+        @Min(1)
+        private int dimensions = 1536;
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
 
         public String getModel() {
             return model;

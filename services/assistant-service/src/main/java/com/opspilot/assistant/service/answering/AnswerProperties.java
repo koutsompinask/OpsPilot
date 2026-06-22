@@ -17,6 +17,7 @@ public class AnswerProperties {
     private long requestTimeoutMs = 20000;
     private final OpenAi openai = new OpenAi();
     private final Ollama ollama = new Ollama();
+    private final Gemini gemini = new Gemini();
 
     public String getProvider() {
         return provider;
@@ -40,6 +41,10 @@ public class AnswerProperties {
 
     public Ollama getOllama() {
         return ollama;
+    }
+
+    public Gemini getGemini() {
+        return gemini;
     }
 
     public static class OpenAi {
@@ -75,6 +80,36 @@ public class AnswerProperties {
     public static class Ollama {
         private String model = "qwen2.5:7b-instruct";
         private String url = "http://localhost:11434/api/generate";
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+    }
+
+    public static class Gemini {
+        private String apiKey = "";
+        private String model = "gemini-2.5-flash";
+        private String url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
 
         public String getModel() {
             return model;

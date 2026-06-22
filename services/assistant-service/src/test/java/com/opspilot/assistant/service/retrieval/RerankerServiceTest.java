@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,6 +19,9 @@ class RerankerServiceTest {
 
     @Mock
     private TeiRerankerProvider teiRerankerProvider;
+
+    @Mock
+    private GeminiReranker geminiReranker;
 
     @Mock
     private HeuristicReranker heuristicReranker;
@@ -33,7 +35,7 @@ class RerankerServiceTest {
                 .thenReturn(List.of(new RerankResult(1, 0.97), new RerankResult(0, 0.32)));
         when(teiRerankerProvider.providerName()).thenReturn("tei");
         when(teiRerankerProvider.modelName()).thenReturn("BAAI/bge-reranker-base");
-        RerankerService service = new RerankerService(properties, teiRerankerProvider, heuristicReranker);
+        RerankerService service = new RerankerService(properties, teiRerankerProvider, geminiReranker, heuristicReranker);
 
         List<RetrievedChunk> result = service.rerank("What time is check-in and check-out?", candidates(), 2);
 
@@ -51,13 +53,30 @@ class RerankerServiceTest {
         doThrow(new IllegalStateException("down")).when(teiRerankerProvider).rerank(eq("What time is check-in and check-out?"), anyList());
         when(heuristicReranker.rerank(eq("What time is check-in and check-out?"), anyList()))
                 .thenReturn(List.of(new RerankResult(0, 0.91), new RerankResult(1, 0.22)));
-        RerankerService service = new RerankerService(properties, teiRerankerProvider, heuristicReranker);
+        RerankerService service = new RerankerService(properties, teiRerankerProvider, geminiReranker, heuristicReranker);
 
         List<RetrievedChunk> result = service.rerank("What time is check-in and check-out?", candidates(), 2);
 
         assertThat(result).hasSize(2);
         assertThat(result.getFirst().chunkIndex()).isEqualTo(0);
         assertThat(result.getFirst().rerankerScore()).isEqualTo(0.91);
+    }
+
+    @Test
+    void rerankShouldSelectGeminiProviderWhenConfigured() {
+        RerankerProperties properties = new RerankerProperties();
+        properties.setEnabled(true);
+        properties.setProvider("gemini");
+        when(geminiReranker.rerank(eq("What time is check-in and check-out?"), anyList()))
+                .thenReturn(List.of(new RerankResult(0, 0.93), new RerankResult(1, 0.45)));
+        when(geminiReranker.providerName()).thenReturn("gemini");
+        when(geminiReranker.modelName()).thenReturn("gemini-2.5-flash");
+        RerankerService service = new RerankerService(properties, teiRerankerProvider, geminiReranker, heuristicReranker);
+
+        List<RetrievedChunk> result = service.rerank("What time is check-in and check-out?", candidates(), 2);
+
+        assertThat(result.getFirst().chunkIndex()).isEqualTo(0);
+        assertThat(result.getFirst().rerankerScore()).isEqualTo(0.93);
     }
 
     private List<RetrievedChunk> candidates() {

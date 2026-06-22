@@ -1,5 +1,6 @@
 package com.opspilot.assistant.service.answering;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opspilot.assistant.repository.RetrievedChunk;
 import com.opspilot.assistant.util.logging.RequestCorrelation;
 import java.util.List;
@@ -27,10 +28,16 @@ public class OllamaAnswerGenerator implements AnswerGenerator {
 
     private final RestTemplate restTemplate;
     private final AnswerProperties properties;
+    private final ObjectMapper objectMapper;
 
-    public OllamaAnswerGenerator(@Qualifier("answerRestTemplate") RestTemplate answerRestTemplate, AnswerProperties properties) {
+    public OllamaAnswerGenerator(
+            @Qualifier("answerRestTemplate") RestTemplate answerRestTemplate,
+            AnswerProperties properties,
+            ObjectMapper objectMapper
+    ) {
         this.restTemplate = answerRestTemplate;
         this.properties = properties;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -73,29 +80,14 @@ public class OllamaAnswerGenerator implements AnswerGenerator {
             throw new IllegalStateException("Unexpected answer response from Ollama");
         }
 
-        String answer = extractJsonField(body.response(), "answer");
-        String reasoningSummary = extractJsonField(body.response(), "reasoningSummary");
+        String answer = LlmJson.extractField(objectMapper, body.response(), "answer");
+        String reasoningSummary = LlmJson.extractField(objectMapper, body.response(), "reasoningSummary");
         return new AnswerGenerationResult(
                 answer == null ? body.response().trim() : answer,
                 reasoningSummary == null ? "Generated from grounded evidence returned by the local answer model." : reasoningSummary,
                 "ollama",
                 "llm-grounded"
         );
-    }
-
-    private String extractJsonField(String content, String field) {
-        String marker = "\"" + field + "\"";
-        int start = content.indexOf(marker);
-        if (start < 0) {
-            return null;
-        }
-        int colon = content.indexOf(':', start);
-        int firstQuote = content.indexOf('"', colon + 1);
-        int secondQuote = content.indexOf('"', firstQuote + 1);
-        if (colon < 0 || firstQuote < 0 || secondQuote < 0) {
-            return null;
-        }
-        return content.substring(firstQuote + 1, secondQuote).trim();
     }
 
     private record OllamaRequest(String model, String prompt, boolean stream) {

@@ -1,5 +1,6 @@
 package com.opspilot.assistant.service.embedding;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.opspilot.assistant.exception.BadRequestException;
 import java.util.List;
 import org.springframework.http.HttpEntity;
@@ -45,7 +46,7 @@ abstract class AbstractOpenAiCompatibleEmbeddingProvider implements EmbeddingPro
 
         ResponseEntity<OpenAiEmbeddingResponse> response = restTemplate.postForEntity(
                 endpointUrl(),
-                new HttpEntity<>(new OpenAiEmbeddingRequest(modelName(), inputs), headers),
+                new HttpEntity<>(new OpenAiEmbeddingRequest(modelName(), inputs, requestedDimensions()), headers),
                 OpenAiEmbeddingResponse.class
         );
 
@@ -82,7 +83,16 @@ abstract class AbstractOpenAiCompatibleEmbeddingProvider implements EmbeddingPro
     /** @return the absolute URL of the embeddings endpoint */
     protected abstract String endpointUrl();
 
-    protected record OpenAiEmbeddingRequest(String model, List<String> input) {
+    /**
+     * Optional output dimension to request from the provider.
+     * Returns {@code null} by default; override in providers that support it (e.g. Gemini).
+     */
+    protected Integer requestedDimensions() {
+        return null;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    protected record OpenAiEmbeddingRequest(String model, List<String> input, Integer dimensions) {
     }
 
     protected record OpenAiEmbeddingResponse(List<EmbeddingData> data) {

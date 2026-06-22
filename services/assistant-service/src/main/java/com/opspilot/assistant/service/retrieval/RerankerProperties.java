@@ -36,6 +36,9 @@ public class RerankerProperties {
     @Valid
     private final Tei tei = new Tei();
 
+    @Valid
+    private final Gemini gemini = new Gemini();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -88,6 +91,10 @@ public class RerankerProperties {
         return tei;
     }
 
+    public Gemini getGemini() {
+        return gemini;
+    }
+
     public static class Tei {
 
         @NotBlank
@@ -95,6 +102,41 @@ public class RerankerProperties {
 
         @NotBlank
         private String url = "http://localhost:8092/rerank";
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+    }
+
+    public static class Gemini {
+
+        private String apiKey = "";
+
+        @NotBlank
+        private String model = "gemini-2.5-flash";
+
+        @NotBlank
+        private String url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
 
         public String getModel() {
             return model;

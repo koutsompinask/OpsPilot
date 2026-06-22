@@ -23,17 +23,20 @@ public class AnswerService {
     private final AnswerProperties properties;
     private final OpenAiAnswerGenerator openAiAnswerGenerator;
     private final OllamaAnswerGenerator ollamaAnswerGenerator;
+    private final GeminiAnswerGenerator geminiAnswerGenerator;
     private final LocalDeterministicAnswerGenerator localAnswerGenerator;
 
     public AnswerService(
             AnswerProperties properties,
             OpenAiAnswerGenerator openAiAnswerGenerator,
             OllamaAnswerGenerator ollamaAnswerGenerator,
+            GeminiAnswerGenerator geminiAnswerGenerator,
             LocalDeterministicAnswerGenerator localAnswerGenerator
     ) {
         this.properties = properties;
         this.openAiAnswerGenerator = openAiAnswerGenerator;
         this.ollamaAnswerGenerator = ollamaAnswerGenerator;
+        this.geminiAnswerGenerator = geminiAnswerGenerator;
         this.localAnswerGenerator = localAnswerGenerator;
     }
 
@@ -51,6 +54,7 @@ public class AnswerService {
             return switch (provider) {
                 case "openai" -> generateWithOpenAi(question, chunks);
                 case "ollama", "local-llm" -> generateWithOllama(question, chunks);
+                case "gemini" -> generateWithGemini(question, chunks);
                 // "extractive" or any unrecognised value falls through to the local generator
                 default -> generateExtractive(question, chunks);
             };
@@ -71,6 +75,15 @@ public class AnswerService {
 
     private AnswerGenerationResult generateWithOllama(String question, List<RetrievedChunk> chunks) {
         AnswerGenerationResult result = ollamaAnswerGenerator.generate(question, chunks);
+        log.info("ai_answer_generated provider={} mode={} chunkCount={}", result.provider(), result.answerMode(), chunks.size());
+        return result;
+    }
+
+    private AnswerGenerationResult generateWithGemini(String question, List<RetrievedChunk> chunks) {
+        if (!geminiAnswerGenerator.isConfigured()) {
+            throw new IllegalStateException("Gemini answer provider is not configured");
+        }
+        AnswerGenerationResult result = geminiAnswerGenerator.generate(question, chunks);
         log.info("ai_answer_generated provider={} mode={} chunkCount={}", result.provider(), result.answerMode(), chunks.size());
         return result;
     }

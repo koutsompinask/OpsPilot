@@ -18,8 +18,9 @@ import com.opspilot.assistant.security.CurrentUser;
 import com.opspilot.assistant.security.CurrentUserResolver;
 import com.opspilot.assistant.service.DocumentService;
 import com.opspilot.assistant.util.logging.RequestCorrelation;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -92,12 +93,13 @@ class DocumentControllerTest {
                 "req-list"
         );
         when(currentUserResolver.fromJwt(any())).thenReturn(user);
-        when(documentService.list(user)).thenReturn(List.of(DocumentResponse.fromEntity(document)));
+        when(documentService.list(eq(user), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(DocumentResponse.fromEntity(document))));
 
         mockMvc.perform(get("/documents"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(document.getId().toString()))
-                .andExpect(jsonPath("$[0].filename").value("faq.md"));
+                .andExpect(jsonPath("$.content[0].id").value(document.getId().toString()))
+                .andExpect(jsonPath("$.content[0].filename").value("faq.md"));
     }
 
     @Test
